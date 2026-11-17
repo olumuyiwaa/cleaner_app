@@ -11,7 +11,7 @@ class Brand {
 
   // UI guide palette — dark card background, pill nav
   static const Color cardDark = Color(0xFF1A1A2E);
-  static const Color pillNav = Color(0xFF1C1C1E);
+  static const Color pillNav = navy;
 }
 
 OutlineInputBorder _inputBorder(Color color, {double width = 1}) =>

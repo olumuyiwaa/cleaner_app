@@ -234,125 +234,142 @@ class JobCard extends StatelessWidget {
     final muted = job.phase == JobPhase.done || job.phase == JobPhase.cancelled;
     final duration = _duration(context, job.start, job.end);
 
-    return Opacity(
-      opacity: muted ? 0.70 : 1,
-      child: Material(
-        color: Theme.of(context).cardTheme.color,
+    final borderColor = (active || nextUp)
+        ? color.withValues(alpha: 0.45)
+        : Theme.of(context).dividerColor;
+
+    return Material(
+      color: Theme.of(context).cardTheme.color,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(20),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(20),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: (active || nextUp)
-                    ? color.withValues(alpha: 0.5)
-                    : Theme.of(context).dividerColor,
-                width: (active || nextUp) ? 1.5 : 1,
-              ),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: borderColor,
+              width: (active || nextUp) ? 1.5 : 1,
             ),
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Left color accent bar
-                  Container(
-                    width: 5,
-                    decoration: BoxDecoration(
-                      color: color,
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(20),
-                        bottomLeft: Radius.circular(20),
-                      ),
-                    ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                height: 6,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(28),
                   ),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(14, 14, 10, 14),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (nextUp && !active) ...[
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: color.withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                context.t('jobs.nextUp').toUpperCase(),
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  letterSpacing: 0.9,
-                                  fontWeight: FontWeight.w800,
-                                  color: color,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                          ],
-                          Row(
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (nextUp && !active) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 9,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          context.t('jobs.nextUp').toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 10,
+                            letterSpacing: 0.8,
+                            fontWeight: FontWeight.w800,
+                            color: color,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                    ],
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    if (showDate)
-                                      Text(
-                                        f.day(job.start),
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: hint,
-                                        ),
-                                      ),
-                                    Text(
-                                      f.timeRange(job.start, job.end),
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleLarge
-                                          ?.copyWith(
-                                              fontWeight: FontWeight.w800),
-                                    ),
-                                  ],
+                              if (showDate)
+                                Text(
+                                  f.day(job.start),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: hint,
+                                  ),
                                 ),
+                              Text(
+                                f.timeRange(job.start, job.end),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleLarge
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: -0.3,
+                                    ),
                               ),
-                              JobStatusPill(job: job),
                             ],
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            job.serviceName,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w700, fontSize: 15),
+                        ),
+                        const SizedBox(width: 8),
+                        JobStatusPill(job: job),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      job.serviceName,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
                           ),
-                          const SizedBox(height: 6),
-                          _line(Icons.place_outlined, job.address, hint),
-                          if (job.customerFirstName.isNotEmpty)
-                            _line(Icons.person_outline, job.customerName, hint),
-                          if (duration.isNotEmpty)
-                            _line(Icons.timer_outlined, duration, hint),
-                        ],
+                    ),
+                    const SizedBox(height: 7),
+                    _line(Icons.place_outlined, job.address, hint, maxLines: 2),
+                    if (job.customerFirstName.isNotEmpty)
+                      _line(Icons.person_outline, job.customerName, hint),
+                    if (duration.isNotEmpty)
+                      _line(Icons.timer_outlined, duration, hint),
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Icon(
+                        Icons.arrow_forward_rounded,
+                        color: hint.withValues(alpha: muted ? 0.7 : 1),
+                        size: 18,
                       ),
                     ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: Icon(Icons.chevron_right, color: hint, size: 20),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _line(IconData icon, String text, Color color) => Padding(
+  Widget _line(
+    IconData icon,
+    String text,
+    Color color, {
+    int maxLines = 1,
+  }) =>
+      Padding(
         padding: const EdgeInsets.only(top: 3),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -360,8 +377,13 @@ class JobCard extends StatelessWidget {
             Icon(icon, size: 15, color: color),
             const SizedBox(width: 5),
             Expanded(
-                child:
-                    Text(text, style: TextStyle(color: color, fontSize: 13))),
+              child: Text(
+                text,
+                maxLines: maxLines,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: color, fontSize: 13),
+              ),
+            ),
           ],
         ),
       );

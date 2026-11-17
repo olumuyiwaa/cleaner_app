@@ -130,35 +130,23 @@ class _PillNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = [
-      (Icons.home_rounded, Icons.home_rounded, context.t('nav.jobs')),
+      (Icons.work_outline_rounded, Icons.work_rounded, context.t('nav.jobs')),
       (
-        Icons.bar_chart_rounded,
-        Icons.bar_chart_rounded,
-        context.t('nav.earnings')
+        Icons.payments_outlined,
+        Icons.payments_rounded,
+        context.t('nav.earnings'),
       ),
-      (Icons.list_alt_rounded, Icons.list_alt_rounded, context.t('nav.jobs')),
-      (Icons.person_rounded, Icons.person_rounded, context.t('nav.profile')),
+      (
+        Icons.person_outline_rounded,
+        Icons.person_rounded,
+        context.t('nav.profile'),
+      ),
     ];
-
-    // Map 4 visual tabs → 3 actual branches (middle two share earnings).
-    int branchIndex(int i) => switch (i) {
-          0 => 0,
-          1 => 1,
-          2 => 1,
-          _ => 2,
-        };
-
-    // Which visual tab is "selected" based on current branch.
-    int visualIndex() => switch (shell.currentIndex) {
-          0 => 0,
-          1 => 1,
-          _ => 3,
-        };
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 28),
       child: Container(
-        height: 68,
+        height: 72,
         decoration: BoxDecoration(
           color: Brand.pillNav,
           borderRadius: BorderRadius.circular(40),
@@ -173,35 +161,65 @@ class _PillNavBar extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: List.generate(items.length, (i) {
-            final selected = visualIndex() == i;
-            final icon = selected ? items[i].$2 : items[i].$1;
+            final selected = shell.currentIndex == i;
+            final item = items[i];
+            final label = item.$3;
             return Expanded(
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () {
-                  final branch = branchIndex(i);
-                  shell.goBranch(
-                    branch,
-                    initialLocation: branch == shell.currentIndex,
-                  );
-                },
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  curve: Curves.easeInOut,
-                  margin:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: selected
-                        ? Colors.white.withValues(alpha: 0.15)
-                        : Colors.transparent,
+              child: Semantics(
+                button: true,
+                selected: selected,
+                label: label,
+                child: ExcludeSemantics(
+                  child: InkWell(
                     borderRadius: BorderRadius.circular(28),
-                  ),
-                  child: Icon(
-                    icon,
-                    size: 26,
-                    color: selected
-                        ? Colors.white
-                        : Colors.white.withValues(alpha: 0.45),
+                    onTap: () => shell.goBranch(
+                      i,
+                      initialLocation: i == shell.currentIndex,
+                    ),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeInOut,
+                      height: 52,
+                      margin: const EdgeInsets.symmetric(
+                        horizontal: 5,
+                        vertical: 10,
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      decoration: BoxDecoration(
+                        color: selected
+                            ? Colors.white.withValues(alpha: 0.16)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(28),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            selected ? item.$2 : item.$1,
+                            size: 21,
+                            color: selected
+                                ? Colors.white
+                                : Colors.white.withValues(alpha: 0.62),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: selected
+                                  ? Colors.white
+                                  : Colors.white.withValues(alpha: 0.62),
+                              fontSize: 10,
+                              height: 1.1,
+                              fontWeight:
+                                  selected ? FontWeight.w700 : FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
