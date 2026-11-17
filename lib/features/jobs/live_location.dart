@@ -67,7 +67,7 @@ class LiveLocation extends Notifier<String?> {
       (p) {
         // At most one ping per interval, however often the phone reports.
         if (DateTime.now().difference(_lastSent) >= AppConfig.locationPingInterval) {
-          _send(p);
+          _send((lat: p.latitude, lng: p.longitude));
         }
       },
       onError: (_) {},
@@ -77,10 +77,10 @@ class LiveLocation extends Notifier<String?> {
     _check = Timer.periodic(const Duration(minutes: 5), (_) => _stillWorking());
   }
 
-  Future<void> _send(Position p) async {
+  Future<void> _send(LatLng at) async {
     _lastSent = DateTime.now();
     try {
-      await ref.read(jobsRepositoryProvider).pingLocation((lat: p.latitude, lng: p.longitude));
+      await ref.read(jobsRepositoryProvider).pingLocation(at);
     } catch (_) {
       // Pings are best effort.
     }

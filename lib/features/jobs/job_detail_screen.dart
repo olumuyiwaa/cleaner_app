@@ -379,7 +379,7 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
 
   /// The primary buttons for the current stage of the job.
   Widget _actions(BuildContext context, Job job) {
-    final spinner = const SizedBox(
+    const spinner = SizedBox(
       height: 22,
       width: 22,
       child: CircularProgressIndicator(strokeWidth: 2.5),

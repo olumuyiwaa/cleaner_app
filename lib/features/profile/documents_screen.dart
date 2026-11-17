@@ -190,7 +190,7 @@ class _UploadFormState extends ConsumerState<_UploadForm> {
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              value: _type,
+              initialValue: _type,
               decoration: InputDecoration(labelText: context.t('documents.typeLabel')),
               items: [
                 for (final t in _docTypes)

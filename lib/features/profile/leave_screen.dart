@@ -201,7 +201,7 @@ class _LeaveFormState extends ConsumerState<_LeaveForm> {
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(height: 16),
             DropdownButtonFormField<LeaveType>(
-              value: _type,
+              initialValue: _type,
               decoration: InputDecoration(labelText: context.t('leave.typeLabel')),
               items: [
                 for (final t in LeaveType.values)

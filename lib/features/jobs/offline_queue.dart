@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/location_service.dart';
 import '../../core/providers.dart';
 import '../auth/session_controller.dart';
 import 'job_models.dart';
@@ -101,7 +102,10 @@ class OfflineQueue extends Notifier<List<QueuedAction>> with WidgetsBindingObser
     return loaded;
   }
 
+  // The parameter is not called `state` because that would hide the
+  // notifier's own `state` (the queue).
   @override
+  // ignore: avoid_renaming_method_parameters
   void didChangeAppLifecycleState(AppLifecycleState lifecycle) {
     if (lifecycle == AppLifecycleState.resumed && state.isNotEmpty) flush();
   }
