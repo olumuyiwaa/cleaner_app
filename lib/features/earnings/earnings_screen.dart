@@ -91,7 +91,7 @@ class EarningsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: Text(context.t('earnings.title'))),
       body: data.when(
-        loading: () => const LoadingView(),
+        loading: () => const SkeletonList(),
         error: (e, _) => ErrorView(error: e, onRetry: () => ref.invalidate(earningsProvider)),
         data: (s) => RefreshIndicator(
           onRefresh: () async {
@@ -112,24 +112,59 @@ class EarningsScreen extends ConsumerWidget {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: _Stat(
-                label: context.t('earnings.pending'),
-                value: f.money(s.pendingCents),
-                color: const Color(0xFFD98200),
-              ),
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Brand.navy, Brand.navyDark],
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _Stat(
-                label: context.t('earnings.paid'),
-                value: f.money(s.lifetimePaidCents),
-                color: Brand.green,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                context.t('earnings.pending'),
+                style: const TextStyle(color: Colors.white70, fontSize: 14),
               ),
-            ),
-          ],
+              const SizedBox(height: 4),
+              Text(
+                f.money(s.pendingCents),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 38,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check_circle, size: 18, color: Color(0xFF9BE15D)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        context.t('earnings.paid'),
+                        style: const TextStyle(color: Colors.white70),
+                      ),
+                    ),
+                    Text(
+                      f.money(s.lifetimePaidCents),
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 12),
         OutlinedButton.icon(
@@ -195,32 +230,4 @@ class EarningsScreen extends ConsumerWidget {
         'IN_PAYOUT' => context.t('earnings.status.inPayout'),
         _ => context.t('earnings.status.pending'),
       };
-}
-
-class _Stat extends StatelessWidget {
-  const _Stat({required this.label, required this.value, required this.color});
-
-  final String label;
-  final String value;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label, style: TextStyle(color: Theme.of(context).hintColor, fontSize: 13)),
-            const SizedBox(height: 6),
-            Text(
-              value,
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: color),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }

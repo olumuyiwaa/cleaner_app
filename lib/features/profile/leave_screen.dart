@@ -54,7 +54,7 @@ class LeaveScreen extends ConsumerWidget {
         label: Text(context.t('leave.request')),
       ),
       body: data.when(
-        loading: () => const LoadingView(),
+        loading: () => const SkeletonList(),
         error: (e, _) => ErrorView(error: e, onRetry: () => ref.invalidate(leaveProvider)),
         data: (list) {
           if (list.isEmpty) {

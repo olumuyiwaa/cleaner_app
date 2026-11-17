@@ -53,7 +53,7 @@ class DocumentsScreen extends ConsumerWidget {
         label: Text(context.t('documents.upload')),
       ),
       body: data.when(
-        loading: () => const LoadingView(),
+        loading: () => const SkeletonList(),
         error: (e, _) => ErrorView(error: e, onRetry: () => ref.invalidate(documentsProvider)),
         data: (list) {
           if (list.isEmpty) {

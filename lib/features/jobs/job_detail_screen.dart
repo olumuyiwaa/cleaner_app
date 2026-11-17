@@ -40,6 +40,7 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
     try {
       final sent = await action();
       if (!mounted) return;
+      successFeedback();
       _refresh();
       showInfo(context, sent ? (success ?? '') : context.t('offline.queued'));
     } catch (e) {
@@ -193,6 +194,9 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
 
     return Scaffold(
       appBar: AppBar(title: Text(context.t('job.title'))),
+      bottomNavigationBar: job.valueOrNull == null
+          ? null
+          : _bottomBar(context, applyPending(job.requireValue, queue)),
       body: job.when(
         loading: () => const LoadingView(),
         error: (e, _) => ErrorView(
@@ -229,6 +233,10 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
           _banner(context, Icons.cloud_upload_outlined,
               context.t('offline.waiting', {'n': '$waiting'}), const Color(0xFFD98200)),
           const SizedBox(height: 12),
+        ],
+        if (phase != JobPhase.cancelled) ...[
+          _Progress(phase: phase),
+          const SizedBox(height: 14),
         ],
         // When and what
         Card(
@@ -349,7 +357,7 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
         ],
 
         const SizedBox(height: 16),
-        _actions(context, job),
+        if (phase == JobPhase.done || phase == JobPhase.cancelled) _actions(context, job),
 
         if (job.checklist.isNotEmpty &&
             (working || phase == JobPhase.done)) ...[
@@ -377,6 +385,23 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
     );
   }
 
+  /// The main buttons, pinned to the bottom so they are always in thumb reach.
+  Widget? _bottomBar(BuildContext context, Job job) {
+    if (job.phase == JobPhase.done || job.phase == JobPhase.cancelled) return null;
+    return Material(
+      color: Theme.of(context).colorScheme.surface,
+      elevation: 8,
+      shadowColor: Colors.black26,
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          child: _actions(context, job),
+        ),
+      ),
+    );
+  }
+
   /// The primary buttons for the current stage of the job.
   Widget _actions(BuildContext context, Job job) {
     const spinner = SizedBox(
@@ -390,13 +415,13 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
         return Column(
           children: [
             FilledButton.icon(
-              onPressed: _busy ? null : _checkIn,
+              onPressed: _busy ? null : () { tapFeedback(); _checkIn(); },
               icon: _busy ? spinner : const Icon(Icons.login),
               label: Text(context.t('job.checkIn')),
             ),
             const SizedBox(height: 10),
             OutlinedButton.icon(
-              onPressed: _busy ? null : _onMyWay,
+              onPressed: _busy ? null : () { tapFeedback(); _onMyWay(); },
               icon: const Icon(Icons.directions_walk),
               label: Text(context.t('job.onMyWay')),
             ),
@@ -404,13 +429,13 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
         );
       case JobPhase.onTheWay:
         return FilledButton.icon(
-          onPressed: _busy ? null : _checkIn,
+          onPressed: _busy ? null : () { tapFeedback(); _checkIn(); },
           icon: _busy ? spinner : const Icon(Icons.login),
           label: Text(context.t('job.checkIn')),
         );
       case JobPhase.working:
         return FilledButton.icon(
-          onPressed: _busy ? null : () => _complete(job),
+          onPressed: _busy ? null : () { tapFeedback(); _complete(job); },
           icon: _busy ? spinner : const Icon(Icons.check_circle_outline),
           label: Text(context.t('job.complete')),
         );
@@ -487,6 +512,77 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Four dots showing where the job is: planned, on the way, working, done.
+class _Progress extends StatelessWidget {
+  const _Progress({required this.phase});
+
+  final JobPhase phase;
+
+  @override
+  Widget build(BuildContext context) {
+    final steps = [
+      (JobPhase.upcoming, context.t('job.step.planned')),
+      (JobPhase.onTheWay, context.t('job.step.onTheWay')),
+      (JobPhase.working, context.t('job.step.working')),
+      (JobPhase.done, context.t('job.step.done')),
+    ];
+    final current = steps.indexWhere((s) => s.$1 == phase);
+    final color = phaseColor(phase);
+    final hint = Theme.of(context).hintColor;
+
+    return Row(
+      children: [
+        for (var i = 0; i < steps.length; i++) ...[
+          Expanded(
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: i == 0
+                          ? const SizedBox()
+                          : Container(height: 3, color: i <= current ? color : hint.withValues(alpha: 0.25)),
+                    ),
+                    Container(
+                      width: 22,
+                      height: 22,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: i <= current ? color : Colors.transparent,
+                        border: Border.all(
+                          color: i <= current ? color : hint.withValues(alpha: 0.4),
+                          width: 2,
+                        ),
+                      ),
+                      child: i < current || phase == JobPhase.done
+                          ? const Icon(Icons.check, size: 14, color: Colors.white)
+                          : null,
+                    ),
+                    Expanded(
+                      child: i == steps.length - 1
+                          ? const SizedBox()
+                          : Container(height: 3, color: i < current ? color : hint.withValues(alpha: 0.25)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  steps[i].$2,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: i == current ? FontWeight.w800 : FontWeight.w500,
+                    color: i == current ? color : hint,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

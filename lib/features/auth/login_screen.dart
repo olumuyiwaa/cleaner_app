@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api/api_client.dart';
 import '../../core/l10n/strings.dart';
 import '../../core/providers.dart';
+import '../../core/theme.dart';
 import '../../core/widgets.dart';
 import 'auth_models.dart';
 import 'session_controller.dart';
@@ -86,53 +87,92 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final lang = ref.watch(localeProvider).languageCode;
 
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Image.asset('assets/images/logo_full.png', width: 150),
-                      SegmentedButton<String>(
-                        showSelectedIcon: false,
-                        style: const ButtonStyle(
-                          visualDensity: VisualDensity.compact,
-                        ),
-                        segments: const [
-                          ButtonSegment(value: 'en', label: Text('EN')),
-                          ButtonSegment(value: 'nl', label: Text('NL')),
-                        ],
-                        selected: {lang},
-                        onSelectionChanged: (s) =>
-                            ref.read(localeProvider.notifier).set(s.first),
+      body: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.fromLTRB(
+              24,
+              MediaQuery.of(context).padding.top + 16,
+              24,
+              32,
+            ),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Brand.navy, Brand.navyDark],
+              ),
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(32)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 28),
-                  Text(
-                    context.t('login.title'),
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
+                      child: Image.asset('assets/images/logo_full.png', height: 40),
+                    ),
+                    SegmentedButton<String>(
+                      showSelectedIcon: false,
+                      style: ButtonStyle(
+                        visualDensity: VisualDensity.compact,
+                        foregroundColor: WidgetStateProperty.resolveWith(
+                          (s) => s.contains(WidgetState.selected) ? Brand.navyDark : Colors.white,
                         ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    context.t('login.subtitle'),
-                    style: TextStyle(color: Theme.of(context).hintColor),
-                  ),
-                  const SizedBox(height: 24),
-                  if (_choices.isNotEmpty) ..._workplaceChooser(context) else _form(context),
-                ],
+                        backgroundColor: WidgetStateProperty.resolveWith(
+                          (s) => s.contains(WidgetState.selected) ? Colors.white : Colors.transparent,
+                        ),
+                        side: const WidgetStatePropertyAll(BorderSide(color: Colors.white54)),
+                      ),
+                      segments: const [
+                        ButtonSegment(value: 'en', label: Text('EN')),
+                        ButtonSegment(value: 'nl', label: Text('NL')),
+                      ],
+                      selected: {lang},
+                      onSelectionChanged: (s) => ref.read(localeProvider.notifier).set(s.first),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 28),
+                Text(
+                  context.t('login.title'),
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  context.t('login.subtitle'),
+                  style: const TextStyle(color: Colors.white70, fontSize: 16),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 420),
+                  child: _choices.isNotEmpty
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: _workplaceChooser(context),
+                        )
+                      : _form(context),
+                ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

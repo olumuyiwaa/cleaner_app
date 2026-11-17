@@ -54,7 +54,7 @@ class _JobsList extends ConsumerWidget {
     final jobs = ref.watch(jobsProvider(tab));
 
     return jobs.when(
-      loading: () => const LoadingView(),
+      loading: () => const SkeletonList(),
       error: (e, _) => ErrorView(error: e, onRetry: () => ref.invalidate(jobsProvider(tab))),
       data: (list) {
         Future<void> refresh() async {
@@ -81,18 +81,31 @@ class _JobsList extends ConsumerWidget {
           );
         }
 
+        // On the Today tab the first job that is not finished is "next up".
+        final nextIndex = tab == JobsTab.today
+            ? list.indexWhere(
+                (j) => j.phase != JobPhase.done && j.phase != JobPhase.cancelled,
+              )
+            : -1;
+        final header = tab == JobsTab.today ? 1 : 0;
+
         return RefreshIndicator(
           onRefresh: refresh,
           child: ListView.separated(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(16),
-            itemCount: list.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
-            itemBuilder: (context, i) => JobCard(
-              job: list[i],
-              showDate: tab != JobsTab.today,
-              onTap: () => context.push('/job/${list[i].id}'),
-            ),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+            itemCount: list.length + header,
+            separatorBuilder: (_, i) => SizedBox(height: i == 0 && header == 1 ? 14 : 12),
+            itemBuilder: (context, i) {
+              if (header == 1 && i == 0) return _TodayHeader(jobs: list);
+              final index = i - header;
+              return JobCard(
+                job: list[index],
+                showDate: tab != JobsTab.today,
+                nextUp: index == nextIndex,
+                onTap: () => context.push('/job/${list[index].id}'),
+              );
+            },
           ),
         );
       },
@@ -106,74 +119,176 @@ class _JobsList extends ConsumerWidget {
       };
 }
 
+class _TodayHeader extends StatelessWidget {
+  const _TodayHeader({required this.jobs});
+
+  final List<Job> jobs;
+
+  @override
+  Widget build(BuildContext context) {
+    final f = context.fmt;
+    final left = jobs
+        .where((j) => j.phase != JobPhase.done && j.phase != JobPhase.cancelled)
+        .length;
+    final summary = jobs.length == 1
+        ? context.t('jobs.summary.one')
+        : context.t('jobs.summary.many', {'n': '${jobs.length}'});
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            f.dayLong(DateTime.now()),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).hintColor,
+                ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            left == 0 ? context.t('jobs.allDone') : summary,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _duration(BuildContext context, DateTime start, DateTime end) {
+  final minutes = end.difference(start).inMinutes;
+  if (minutes <= 0) return '';
+  final h = minutes ~/ 60;
+  final m = minutes % 60;
+  if (h == 0) return '${m}m';
+  return m == 0 ? '${h}h' : '${h}h ${m}m';
+}
+
 class JobCard extends StatelessWidget {
-  const JobCard({super.key, required this.job, required this.onTap, this.showDate = false});
+  const JobCard({
+    super.key,
+    required this.job,
+    required this.onTap,
+    this.showDate = false,
+    this.nextUp = false,
+  });
 
   final Job job;
   final VoidCallback onTap;
   final bool showDate;
+  final bool nextUp;
 
   @override
   Widget build(BuildContext context) {
     final f = context.fmt;
     final hint = Theme.of(context).hintColor;
+    final color = phaseColor(job.phase);
     final active = job.phase == JobPhase.working || job.phase == JobPhase.onTheWay;
+    final muted = job.phase == JobPhase.done || job.phase == JobPhase.cancelled;
+    final duration = _duration(context, job.start, job.end);
 
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      shape: active
-          ? RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
-              side: BorderSide(color: phaseColor(job.phase), width: 1.5),
-            )
-          : null,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      showDate
-                          ? '${f.day(job.start)} · ${f.timeRange(job.start, job.end)}'
-                          : f.timeRange(job.start, job.end),
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
+    return Opacity(
+      opacity: muted ? 0.72 : 1,
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: BorderSide(
+            color: (active || nextUp) ? color : Theme.of(context).dividerColor,
+            width: (active || nextUp) ? 1.5 : 1,
+          ),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(width: 6, color: color),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (nextUp && !active) ...[
+                          Text(
+                            context.t('jobs.nextUp').toUpperCase(),
+                            style: TextStyle(
+                              fontSize: 11,
+                              letterSpacing: 1.1,
+                              fontWeight: FontWeight.w800,
+                              color: color,
+                            ),
                           ),
+                          const SizedBox(height: 4),
+                        ],
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (showDate)
+                                    Text(
+                                      f.day(job.start),
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: hint,
+                                      ),
+                                    ),
+                                  Text(
+                                    f.timeRange(job.start, job.end),
+                                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            JobStatusPill(job: job),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          job.serviceName,
+                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                        ),
+                        const SizedBox(height: 8),
+                        _line(Icons.place_outlined, job.address, hint),
+                        if (job.customerFirstName.isNotEmpty)
+                          _line(Icons.person_outline, job.customerName, hint),
+                        if (duration.isNotEmpty) _line(Icons.timer_outlined, duration, hint),
+                      ],
                     ),
                   ),
-                  JobStatusPill(job: job),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(job.serviceName, style: const TextStyle(fontWeight: FontWeight.w600)),
-              const SizedBox(height: 6),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(Icons.place_outlined, size: 18, color: hint),
-                  const SizedBox(width: 6),
-                  Expanded(child: Text(job.address, style: TextStyle(color: hint))),
-                ],
-              ),
-              if (job.customerFirstName.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Icon(Icons.person_outline, size: 18, color: hint),
-                    const SizedBox(width: 6),
-                    Text(job.customerName, style: TextStyle(color: hint)),
-                  ],
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: Icon(Icons.chevron_right, color: hint),
                 ),
               ],
-            ],
+            ),
           ),
         ),
       ),
     );
   }
+
+  Widget _line(IconData icon, String text, Color color) => Padding(
+        padding: const EdgeInsets.only(top: 4),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: 17, color: color),
+            const SizedBox(width: 6),
+            Expanded(child: Text(text, style: TextStyle(color: color))),
+          ],
+        ),
+      );
 }

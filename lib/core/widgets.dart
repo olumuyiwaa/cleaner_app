@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'api/api_client.dart';
 import 'l10n/strings.dart';
@@ -37,6 +38,27 @@ class LoadingView extends StatelessWidget {
       const Center(child: CircularProgressIndicator());
 }
 
+/// A soft round badge behind an icon, used by empty and error states.
+class _IconBadge extends StatelessWidget {
+  const _IconBadge(this.icon);
+
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: 84,
+      height: 84,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: scheme.primary.withValues(alpha: 0.08),
+      ),
+      child: Icon(icon, size: 38, color: scheme.primary.withValues(alpha: 0.75)),
+    );
+  }
+}
+
 class ErrorView extends StatelessWidget {
   const ErrorView({super.key, required this.error, required this.onRetry});
 
@@ -45,20 +67,26 @@ class ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final offline = error is ApiException && (error as ApiException).isNetwork;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.cloud_off, size: 40, color: Theme.of(context).hintColor),
-            const SizedBox(height: 12),
-            Text(errorText(context, error), textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            OutlinedButton(
-              style: OutlinedButton.styleFrom(minimumSize: const Size(160, 48)),
+            _IconBadge(offline ? Icons.wifi_off_rounded : Icons.error_outline_rounded),
+            const SizedBox(height: 20),
+            Text(
+              errorText(context, error),
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(minimumSize: const Size(160, 48)),
               onPressed: onRetry,
-              child: Text(context.t('common.retry')),
+              icon: const Icon(Icons.refresh_rounded, size: 20),
+              label: Text(context.t('common.retry')),
             ),
           ],
         ),
@@ -83,12 +111,15 @@ class EmptyView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 48, color: hint),
-            const SizedBox(height: 12),
+            _IconBadge(icon),
+            const SizedBox(height: 20),
             Text(
               title,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleMedium,
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontWeight: FontWeight.w700),
             ),
             if (message != null) ...[
               const SizedBox(height: 6),
@@ -191,4 +222,91 @@ Future<bool> confirm(
     ),
   );
   return result ?? false;
+}
+
+/// A light tap for important actions (check-in, complete, send).
+void tapFeedback() => HapticFeedback.lightImpact();
+
+/// A firmer tap when something is finished.
+void successFeedback() => HapticFeedback.mediumImpact();
+
+/// A pulsing grey block shown while content loads.
+class Skeleton extends StatefulWidget {
+  const Skeleton({super.key, this.width, this.height = 14, this.radius = 8});
+
+  final double? width;
+  final double height;
+  final double radius;
+
+  @override
+  State<Skeleton> createState() => _SkeletonState();
+}
+
+class _SkeletonState extends State<Skeleton> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1100),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final base = Theme.of(context).colorScheme.onSurface;
+    return AnimatedBuilder(
+      animation: _c,
+      builder: (_, __) => Container(
+        width: widget.width,
+        height: widget.height,
+        decoration: BoxDecoration(
+          color: base.withValues(alpha: 0.06 + 0.06 * _c.value),
+          borderRadius: BorderRadius.circular(widget.radius),
+        ),
+      ),
+    );
+  }
+}
+
+/// Placeholder cards while a list loads.
+class SkeletonList extends StatelessWidget {
+  const SkeletonList({super.key, this.count = 3});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.separated(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(16),
+      itemCount: count,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (_, __) => const Card(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Skeleton(width: 120, height: 20),
+                  Spacer(),
+                  Skeleton(width: 64, height: 22, radius: 20),
+                ],
+              ),
+              SizedBox(height: 14),
+              Skeleton(width: 180),
+              SizedBox(height: 10),
+              Skeleton(),
+              SizedBox(height: 8),
+              Skeleton(width: 110),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

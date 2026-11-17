@@ -10,6 +10,11 @@ class Brand {
   static const Color blue = Color(0xFF2F6DB5);
 }
 
+OutlineInputBorder _inputBorder(Color color, {double width = 1}) => OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: BorderSide(color: color, width: width),
+    );
+
 class AppTheme {
   AppTheme._();
 
@@ -68,18 +73,66 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: isLight ? Colors.white : const Color(0xFF172033),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(
-            color: isLight ? const Color(0xFFD5DCE8) : const Color(0xFF263149),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        border: _inputBorder(isLight ? const Color(0xFFD5DCE8) : const Color(0xFF263149)),
+        enabledBorder:
+            _inputBorder(isLight ? const Color(0xFFD5DCE8) : const Color(0xFF263149)),
+        focusedBorder: _inputBorder(scheme.primary, width: 2),
+        errorBorder: _inputBorder(scheme.error),
+        focusedErrorBorder: _inputBorder(scheme.error, width: 2),
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        height: 68,
+        elevation: 0,
+        backgroundColor: isLight ? Colors.white : const Color(0xFF151C2B),
+        indicatorColor: Brand.navy.withValues(alpha: isLight ? 0.12 : 0.35),
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+        labelTextStyle: WidgetStateProperty.resolveWith(
+          (states) => TextStyle(
+            fontSize: 12,
+            fontWeight: states.contains(WidgetState.selected) ? FontWeight.w700 : FontWeight.w500,
           ),
         ),
       ),
-      navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: isLight ? Colors.white : const Color(0xFF151C2B),
-        indicatorColor: Brand.navy.withValues(alpha: isLight ? 0.12 : 0.35),
+      tabBarTheme: TabBarThemeData(
+        indicatorSize: TabBarIndicatorSize.label,
+        dividerColor: Colors.transparent,
+        labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 15),
+        indicator: UnderlineTabIndicator(
+          borderSide: BorderSide(color: Brand.green, width: 3),
+          borderRadius: BorderRadius.circular(3),
+        ),
       ),
-      snackBarTheme: const SnackBarThemeData(behavior: SnackBarBehavior.floating),
+      dialogTheme: DialogThemeData(
+        backgroundColor: isLight ? Colors.white : const Color(0xFF172033),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        showDragHandle: true,
+        backgroundColor: isLight ? Colors.white : const Color(0xFF172033),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: Brand.green,
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+      progressIndicatorTheme: ProgressIndicatorThemeData(color: Brand.green),
+      dividerTheme: DividerThemeData(
+        color: isLight ? const Color(0xFFE3E8F1) : const Color(0xFF263149),
+        space: 1,
+      ),
+      listTileTheme: const ListTileThemeData(
+        contentPadding: EdgeInsets.symmetric(horizontal: 16),
+        minVerticalPadding: 10,
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
     );
   }
 }

@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../core/l10n/strings.dart';
 import '../../core/providers.dart';
+import '../../core/theme.dart';
 import '../../core/widgets.dart';
 import '../auth/auth_models.dart';
 import '../auth/session_controller.dart';
@@ -94,7 +95,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         children: [
-          Center(
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(22),
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Brand.navy, Brand.navyDark],
+              ),
+            ),
             child: Column(
               children: [
                 GestureDetector(
@@ -104,6 +114,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     children: [
                       CircleAvatar(
                         radius: 44,
+                        backgroundColor: Colors.white24,
+                        foregroundColor: Colors.white,
                         backgroundImage:
                             profile.avatarUrl != null ? NetworkImage(profile.avatarUrl!) : null,
                         child: profile.avatarUrl == null
@@ -112,7 +124,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       ),
                       CircleAvatar(
                         radius: 15,
-                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        backgroundColor: Brand.green,
                         child: _uploading
                             ? const SizedBox(
                                 width: 14,
@@ -126,8 +138,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
                 const SizedBox(height: 12),
                 Text(profile.fullName,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
-                Text(profile.businessName, style: TextStyle(color: Theme.of(context).hintColor)),
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleLarge
+                        ?.copyWith(fontWeight: FontWeight.w800, color: Colors.white)),
+                const SizedBox(height: 2),
+                Text(profile.businessName, style: const TextStyle(color: Colors.white70)),
               ],
             ),
           ),
