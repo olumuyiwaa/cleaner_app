@@ -1,0 +1,477 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import '../../core/config.dart';
+import '../../core/format.dart';
+import '../../core/l10n/strings.dart';
+import '../../core/providers.dart';
+import '../../core/widgets.dart';
+import 'job_models.dart';
+import 'job_ui.dart';
+import 'job_widgets.dart';
+import 'jobs_providers.dart';
+import 'jobs_repository.dart';
+
+class JobDetailScreen extends ConsumerStatefulWidget {
+  const JobDetailScreen({super.key, required this.jobId});
+
+  final String jobId;
+
+  @override
+  ConsumerState<JobDetailScreen> createState() => _JobDetailScreenState();
+}
+
+class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
+  bool _busy = false;
+  Timer? _pingTimer;
+
+  @override
+  void dispose() {
+    _pingTimer?.cancel();
+    super.dispose();
+  }
+
+  void _refresh() {
+    ref.invalidate(jobProvider(widget.jobId));
+    ref.invalidate(jobsProvider);
+  }
+
+  /// Runs a server action with a busy state, then refreshes the job.
+  Future<void> _run(Future<void> Function() action, {String? success}) async {
+    setState(() => _busy = true);
+    try {
+      await action();
+      if (!mounted) return;
+      _refresh();
+      if (success != null) showInfo(context, success);
+    } catch (e) {
+      if (mounted) showError(context, e);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// While the job is in progress, send our position to the dispatch map.
+  void _syncPing(bool working) {
+    if (working && _pingTimer == null) {
+      _ping();
+      _pingTimer = Timer.periodic(AppConfig.locationPingInterval, (_) => _ping());
+    } else if (!working && _pingTimer != null) {
+      _pingTimer!.cancel();
+      _pingTimer = null;
+    }
+  }
+
+  Future<void> _ping() async {
+    final at = await ref
+        .read(locationServiceProvider)
+        .currentPosition(timeout: const Duration(seconds: 5));
+    if (at == null) return;
+    try {
+      await ref.read(jobsRepositoryProvider).pingLocation(at);
+    } catch (_) {
+      // Pings are best effort.
+    }
+  }
+
+  Future<void> _onMyWay() => _run(
+        () => ref.read(jobsRepositoryProvider).onMyWay(widget.jobId),
+        success: context.t('job.onMyWaySent'),
+      );
+
+  Future<void> _checkIn() => _run(
+        () async {
+          final at = await ref.read(locationServiceProvider).currentPosition();
+          await ref.read(jobsRepositoryProvider).checkInAndStart(widget.jobId, at);
+        },
+        success: context.t('job.checkedIn'),
+      );
+
+  Future<void> _complete(Job job) async {
+    final notes = await _askCompletion(job);
+    if (notes == null || !mounted) return;
+    await _run(
+      () async {
+        final at = await ref.read(locationServiceProvider).currentPosition();
+        await ref
+            .read(jobsRepositoryProvider)
+            .complete(widget.jobId, at: at, notes: notes);
+      },
+      success: context.t('job.completed'),
+    );
+  }
+
+  /// Returns the optional note, or null when cancelled.
+  Future<String?> _askCompletion(Job job) {
+    final controller = TextEditingController();
+    final warnings = <String>[
+      if (job.checklist.isNotEmpty && job.checklistDone < job.checklist.length)
+        context.t('job.warnChecklist', {
+          'n': '${job.checklist.length - job.checklistDone}',
+        }),
+      if (job.photoCount('AFTER') == 0) context.t('job.warnPhotos'),
+    ];
+
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(ctx.t('job.completeTitle')),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final w in warnings)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.warning_amber_rounded,
+                          size: 18, color: Color(0xFFD98200)),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text(w)),
+                    ],
+                  ),
+                ),
+              Text(ctx.t('job.completeMessage')),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                maxLines: 3,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: InputDecoration(labelText: ctx.t('job.notes')),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(ctx.t('common.cancel')),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(minimumSize: const Size(120, 44)),
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: Text(ctx.t('job.complete')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openMaps(Job job) async {
+    final destination = (job.latitude != null && job.longitude != null)
+        ? '${job.latitude},${job.longitude}'
+        : Uri.encodeComponent(job.address);
+    final uri = Uri.parse(
+      'https://www.google.com/maps/dir/?api=1&destination=$destination',
+    );
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!ok && mounted) showInfo(context, context.t('job.cannotOpen'));
+  }
+
+  Future<void> _call(String phone) async {
+    final ok = await launchUrl(Uri(scheme: 'tel', path: phone));
+    if (!ok && mounted) showInfo(context, context.t('job.cannotOpen'));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final job = ref.watch(jobProvider(widget.jobId));
+
+    return Scaffold(
+      appBar: AppBar(title: Text(context.t('job.title'))),
+      body: job.when(
+        loading: () => const LoadingView(),
+        error: (e, _) => ErrorView(
+          error: e,
+          onRetry: () => ref.invalidate(jobProvider(widget.jobId)),
+        ),
+        data: (job) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) _syncPing(job.phase == JobPhase.working);
+          });
+          return RefreshIndicator(
+            onRefresh: () async {
+              _refresh();
+              await ref.read(jobProvider(widget.jobId).future);
+            },
+            child: _body(context, job),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _body(BuildContext context, Job job) {
+    final f = context.fmt;
+    final hint = Theme.of(context).hintColor;
+    final phase = job.phase;
+    final working = phase == JobPhase.working;
+
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+      children: [
+        // When and what
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        f.dayLong(job.start),
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                    ),
+                    JobStatusPill(job: job),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  f.timeRange(job.start, job.end),
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(height: 8),
+                Text(job.serviceName, style: const TextStyle(fontWeight: FontWeight.w600)),
+                if (job.extras.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    '+ ${job.extras.join(', ')}',
+                    style: TextStyle(color: hint),
+                  ),
+                ],
+                if (job.assignment?.isTeamLead == true) ...[
+                  const SizedBox(height: 8),
+                  Text(context.t('job.teamLead'), style: TextStyle(color: hint)),
+                ],
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // Where and who
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.place_outlined, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(job.address)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    const Icon(Icons.person_outline, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(job.customerName)),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _smallAction(Icons.navigation_outlined, context.t('job.navigate'),
+                        () => _openMaps(job)),
+                    if (job.customerPhone != null)
+                      _smallAction(Icons.call_outlined, context.t('job.call'),
+                          () => _call(job.customerPhone!)),
+                    if (phase != JobPhase.cancelled)
+                      _smallAction(Icons.chat_bubble_outline, context.t('job.chat'),
+                          () => context.push('/job/${job.id}/chat')),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        if (job.hasNotes) ...[
+          const SizedBox(height: 12),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    context.t('job.accessNotes'),
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 8),
+                  _note(context, Icons.pin_outlined, context.t('job.accessCode'),
+                      job.accessCode,
+                      copyable: true),
+                  _note(context, Icons.key_outlined, context.t('job.keyLocation'),
+                      job.keyLocation),
+                  _note(context, Icons.local_parking, context.t('job.parking'),
+                      job.parkingInstructions),
+                  _note(context, Icons.pets_outlined, context.t('job.pets'), job.petNotes),
+                  _note(context, Icons.info_outline, context.t('job.instructions'),
+                      job.specialInstructions),
+                ],
+              ),
+            ),
+          ),
+        ],
+
+        const SizedBox(height: 16),
+        _actions(context, job),
+
+        if (job.checklist.isNotEmpty &&
+            (working || phase == JobPhase.done)) ...[
+          const SizedBox(height: 16),
+          ChecklistSection(
+            jobId: job.id,
+            items: job.checklist,
+            editable: working,
+          ),
+        ],
+        if (working || phase == JobPhase.done) ...[
+          const SizedBox(height: 12),
+          PhotosSection(
+            jobId: job.id,
+            photos: job.photos,
+            canAdd: working,
+            onUploaded: _refresh,
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// The primary buttons for the current stage of the job.
+  Widget _actions(BuildContext context, Job job) {
+    final spinner = const SizedBox(
+      height: 22,
+      width: 22,
+      child: CircularProgressIndicator(strokeWidth: 2.5),
+    );
+
+    switch (job.phase) {
+      case JobPhase.upcoming:
+        return Column(
+          children: [
+            FilledButton.icon(
+              onPressed: _busy ? null : _checkIn,
+              icon: _busy ? spinner : const Icon(Icons.login),
+              label: Text(context.t('job.checkIn')),
+            ),
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: _busy ? null : _onMyWay,
+              icon: const Icon(Icons.directions_walk),
+              label: Text(context.t('job.onMyWay')),
+            ),
+          ],
+        );
+      case JobPhase.onTheWay:
+        return FilledButton.icon(
+          onPressed: _busy ? null : _checkIn,
+          icon: _busy ? spinner : const Icon(Icons.login),
+          label: Text(context.t('job.checkIn')),
+        );
+      case JobPhase.working:
+        return FilledButton.icon(
+          onPressed: _busy ? null : () => _complete(job),
+          icon: _busy ? spinner : const Icon(Icons.check_circle_outline),
+          label: Text(context.t('job.complete')),
+        );
+      case JobPhase.done:
+        return _banner(context, Icons.check_circle, context.t('job.doneBanner'),
+            const Color(0xFF3F8A10));
+      case JobPhase.cancelled:
+        return _banner(context, Icons.cancel_outlined, context.t('job.cancelledBanner'),
+            const Color(0xFFC8372D));
+    }
+  }
+
+  Widget _banner(BuildContext context, IconData icon, String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color),
+          const SizedBox(width: 10),
+          Expanded(child: Text(text, style: TextStyle(color: color, fontWeight: FontWeight.w600))),
+        ],
+      ),
+    );
+  }
+
+  Widget _smallAction(IconData icon, String label, VoidCallback onTap) {
+    return OutlinedButton.icon(
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(0, 44),
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+      ),
+      onPressed: onTap,
+      icon: Icon(icon, size: 18),
+      label: Text(label),
+    );
+  }
+
+  Widget _note(
+    BuildContext context,
+    IconData icon,
+    String label,
+    String? value, {
+    bool copyable = false,
+  }) {
+    if (value == null || value.isEmpty) return const SizedBox.shrink();
+    final hint = Theme.of(context).hintColor;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: InkWell(
+        onLongPress: copyable
+            ? () {
+                Clipboard.setData(ClipboardData(text: value));
+                showInfo(context, context.t('common.copied'));
+              }
+            : null,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: 18, color: hint),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label, style: TextStyle(fontSize: 12, color: hint)),
+                  Text(value),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

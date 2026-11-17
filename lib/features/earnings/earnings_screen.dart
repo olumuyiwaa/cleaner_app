@@ -1,0 +1,226 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../core/api/api_client.dart';
+import '../../core/format.dart';
+import '../../core/json.dart';
+import '../../core/l10n/strings.dart';
+import '../../core/providers.dart';
+import '../../core/theme.dart';
+import '../../core/widgets.dart';
+
+class EarningRow {
+  const EarningRow({
+    required this.id,
+    required this.amountCents,
+    required this.status,
+    required this.earnedAt,
+  });
+
+  final String id;
+  final int amountCents;
+  final String status;
+  final DateTime? earnedAt;
+
+  factory EarningRow.fromJson(Map<String, dynamic> j) => EarningRow(
+        id: str(j['id']) ?? '',
+        amountCents: intOf(j['amountCents']),
+        status: str(j['status']) ?? 'PENDING',
+        earnedAt: dateOf(j['earnedAt']),
+      );
+}
+
+class PayoutRow {
+  const PayoutRow({
+    required this.id,
+    required this.totalCents,
+    required this.status,
+    required this.periodStart,
+    required this.periodEnd,
+  });
+
+  final String id;
+  final int totalCents;
+  final String status;
+  final DateTime? periodStart;
+  final DateTime? periodEnd;
+
+  factory PayoutRow.fromJson(Map<String, dynamic> j) => PayoutRow(
+        id: str(j['id']) ?? '',
+        totalCents: intOf(j['totalCents']),
+        status: str(j['status']) ?? '',
+        periodStart: dateOf(j['periodStart']),
+        periodEnd: dateOf(j['periodEnd']),
+      );
+}
+
+class EarningsSummary {
+  const EarningsSummary({
+    required this.pendingCents,
+    required this.lifetimePaidCents,
+    required this.earnings,
+    required this.payouts,
+  });
+
+  final int pendingCents;
+  final int lifetimePaidCents;
+  final List<EarningRow> earnings;
+  final List<PayoutRow> payouts;
+
+  factory EarningsSummary.fromJson(Map<String, dynamic> j) => EarningsSummary(
+        pendingCents: intOf(j['pendingCents']),
+        lifetimePaidCents: intOf(j['lifetimePaidCents']),
+        earnings: mapsOf(j['recentEarnings']).map(EarningRow.fromJson).toList(),
+        payouts: mapsOf(j['recentPayouts']).map(PayoutRow.fromJson).toList(),
+      );
+}
+
+final earningsProvider = FutureProvider.autoDispose<EarningsSummary>((ref) async {
+  final ApiClient api = ref.watch(apiClientProvider);
+  return EarningsSummary.fromJson(mapOf(await api.get('/cleaners/me/earnings')));
+});
+
+class EarningsScreen extends ConsumerWidget {
+  const EarningsScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final data = ref.watch(earningsProvider);
+
+    return Scaffold(
+      appBar: AppBar(title: Text(context.t('earnings.title'))),
+      body: data.when(
+        loading: () => const LoadingView(),
+        error: (e, _) => ErrorView(error: e, onRetry: () => ref.invalidate(earningsProvider)),
+        data: (s) => RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(earningsProvider);
+            await ref.read(earningsProvider.future);
+          },
+          child: _body(context, s),
+        ),
+      ),
+    );
+  }
+
+  Widget _body(BuildContext context, EarningsSummary s) {
+    final f = context.fmt;
+    final hint = Theme.of(context).hintColor;
+
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _Stat(
+                label: context.t('earnings.pending'),
+                value: f.money(s.pendingCents),
+                color: const Color(0xFFD98200),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _Stat(
+                label: context.t('earnings.paid'),
+                value: f.money(s.lifetimePaidCents),
+                color: Brand.green,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: () => context.push('/payouts'),
+          icon: const Icon(Icons.account_balance_outlined),
+          label: Text(context.t('earnings.payoutSetup')),
+        ),
+        SectionTitle(context.t('earnings.recent')),
+        if (s.earnings.isEmpty)
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(context.t('earnings.emptyEarnings'), style: TextStyle(color: hint)),
+          )
+        else
+          Card(
+            child: Column(
+              children: [
+                for (final e in s.earnings)
+                  ListTile(
+                    title: Text(f.money(e.amountCents),
+                        style: const TextStyle(fontWeight: FontWeight.w700)),
+                    subtitle: Text(e.earnedAt == null ? '' : f.date(e.earnedAt!)),
+                    trailing: StatusPill(
+                      label: _earningLabel(context, e.status),
+                      color: e.status == 'PAID'
+                          ? Brand.green
+                          : (e.status == 'IN_PAYOUT' ? Brand.blue : const Color(0xFFD98200)),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        SectionTitle(context.t('earnings.payouts')),
+        if (s.payouts.isEmpty)
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(context.t('earnings.emptyPayouts'), style: TextStyle(color: hint)),
+          )
+        else
+          Card(
+            child: Column(
+              children: [
+                for (final p in s.payouts)
+                  ListTile(
+                    title: Text(f.money(p.totalCents),
+                        style: const TextStyle(fontWeight: FontWeight.w700)),
+                    subtitle: Text(
+                      (p.periodStart != null && p.periodEnd != null)
+                          ? '${f.date(p.periodStart!)} – ${f.date(p.periodEnd!)}'
+                          : '',
+                    ),
+                    trailing: Text(p.status, style: TextStyle(color: hint, fontSize: 12)),
+                  ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  String _earningLabel(BuildContext context, String status) => switch (status) {
+        'PAID' => context.t('earnings.status.paid'),
+        'IN_PAYOUT' => context.t('earnings.status.inPayout'),
+        _ => context.t('earnings.status.pending'),
+      };
+}
+
+class _Stat extends StatelessWidget {
+  const _Stat({required this.label, required this.value, required this.color});
+
+  final String label;
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: TextStyle(color: Theme.of(context).hintColor, fontSize: 13)),
+            const SizedBox(height: 6),
+            Text(
+              value,
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: color),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
