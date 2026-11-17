@@ -10,7 +10,8 @@ class Brand {
   static const Color blue = Color(0xFF2F6DB5);
 }
 
-OutlineInputBorder _inputBorder(Color color, {double width = 1}) => OutlineInputBorder(
+OutlineInputBorder _inputBorder(Color color, {double width = 1}) =>
+    OutlineInputBorder(
       borderRadius: BorderRadius.circular(14),
       borderSide: BorderSide(color: color, width: width),
     );
@@ -27,70 +28,93 @@ class AppTheme {
       brightness: brightness,
     );
     final scheme = base.copyWith(
-      primary: brightness == Brightness.light ? Brand.navy : const Color(0xFF9DB8EA),
+      primary:
+          brightness == Brightness.light ? Brand.navy : const Color(0xFF9DB8EA),
       onPrimary: brightness == Brightness.light ? Colors.white : Brand.navyDark,
       secondary: Brand.green,
     );
     final isLight = brightness == Brightness.light;
+    final textTheme = ThemeData(brightness: brightness).textTheme;
 
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
       scaffoldBackgroundColor:
-          isLight ? const Color(0xFFF1F4F9) : const Color(0xFF0E1420),
+          isLight ? const Color(0xFFF5F7FB) : const Color(0xFF0E1420),
+      textTheme: textTheme.apply(
+        bodyColor: isLight ? const Color(0xFF25334A) : const Color(0xFFE7ECF5),
+        displayColor: isLight ? Brand.navyDark : Colors.white,
+      ),
       appBarTheme: AppBarTheme(
         backgroundColor: isLight ? Colors.white : const Color(0xFF151C2B),
         foregroundColor: isLight ? Brand.navyDark : Colors.white,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
-        scrolledUnderElevation: 1,
+        scrolledUnderElevation: 0,
         centerTitle: false,
+        toolbarHeight: 68,
+        titleTextStyle: TextStyle(
+          color: isLight ? Brand.navyDark : Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.3,
+        ),
       ),
       cardTheme: CardThemeData(
-        elevation: 0,
+        elevation: isLight ? 1 : 0,
         margin: EdgeInsets.zero,
         color: isLight ? Colors.white : const Color(0xFF172033),
+        shadowColor: Brand.navy.withValues(alpha: 0.06),
+        surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(20),
           side: BorderSide(
-            color: isLight ? const Color(0xFFE3E8F1) : const Color(0xFF263149),
+            color: isLight ? const Color(0xFFE8ECF3) : const Color(0xFF263149),
           ),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          minimumSize: const Size.fromHeight(52),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          minimumSize: const Size.fromHeight(54),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          minimumSize: const Size.fromHeight(52),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          minimumSize: const Size.fromHeight(54),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: isLight ? Colors.white : const Color(0xFF172033),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        border: _inputBorder(isLight ? const Color(0xFFD5DCE8) : const Color(0xFF263149)),
-        enabledBorder:
-            _inputBorder(isLight ? const Color(0xFFD5DCE8) : const Color(0xFF263149)),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        border: _inputBorder(
+            isLight ? const Color(0xFFDDE3EC) : const Color(0xFF263149)),
+        enabledBorder: _inputBorder(
+            isLight ? const Color(0xFFDDE3EC) : const Color(0xFF263149)),
         focusedBorder: _inputBorder(scheme.primary, width: 2),
         errorBorder: _inputBorder(scheme.error),
         focusedErrorBorder: _inputBorder(scheme.error, width: 2),
       ),
       navigationBarTheme: NavigationBarThemeData(
-        height: 68,
+        height: 74,
         elevation: 0,
         backgroundColor: isLight ? Colors.white : const Color(0xFF151C2B),
-        indicatorColor: Brand.navy.withValues(alpha: isLight ? 0.12 : 0.35),
+        indicatorColor: (isLight ? Brand.navy : const Color(0xFF9DB8EA))
+            .withValues(alpha: isLight ? 0.10 : 0.25),
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         labelTextStyle: WidgetStateProperty.resolveWith(
           (states) => TextStyle(
             fontSize: 12,
-            fontWeight: states.contains(WidgetState.selected) ? FontWeight.w700 : FontWeight.w500,
+            fontWeight: states.contains(WidgetState.selected)
+                ? FontWeight.w700
+                : FontWeight.w500,
           ),
         ),
       ),
@@ -98,7 +122,8 @@ class AppTheme {
         indicatorSize: TabBarIndicatorSize.label,
         dividerColor: Colors.transparent,
         labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 15),
+        unselectedLabelStyle:
+            const TextStyle(fontWeight: FontWeight.w500, fontSize: 15),
         indicator: UnderlineTabIndicator(
           borderSide: BorderSide(color: Brand.green, width: 3),
           borderRadius: BorderRadius.circular(3),

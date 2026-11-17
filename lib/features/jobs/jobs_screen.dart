@@ -15,15 +15,53 @@ class JobsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final name = ref.watch(sessionProvider).valueOrNull?.firstName ?? '';
+    final profile = ref.watch(sessionProvider).valueOrNull;
+    final name = profile?.firstName ?? '';
 
     return DefaultTabController(
       length: JobsTab.values.length,
       child: Scaffold(
         appBar: AppBar(
-          title: Text(
-            name.isEmpty ? context.t('jobs.title') : context.t('jobs.hi', {'name': name}),
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                name.isEmpty ? context.t('jobs.title') : context.t('jobs.hi', {'name': name}),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text(
+                context.fmt.dayLong(DateTime.now()),
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: Theme.of(context).hintColor,
+                      fontWeight: FontWeight.w500,
+                    ),
+              ),
+            ],
           ),
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: IconButton(
+                tooltip: context.t('nav.profile'),
+                onPressed: () => context.go('/profile'),
+                icon: CircleAvatar(
+                  radius: 19,
+                  backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
+                  backgroundImage:
+                      profile?.avatarUrl == null ? null : NetworkImage(profile!.avatarUrl!),
+                  child: profile?.avatarUrl == null
+                      ? Text(
+                          profile?.initials ?? '?',
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                        )
+                      : null,
+                ),
+              ),
+            ),
+          ],
           bottom: TabBar(
             tabs: [
               Tab(text: context.t('jobs.today')),

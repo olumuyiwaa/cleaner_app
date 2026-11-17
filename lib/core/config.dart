@@ -4,12 +4,11 @@ class AppConfig {
   AppConfig._();
 
   /// Backend base URL including the /api/v1 prefix.
-  /// 10.0.2.2 is the Android emulator's alias for the host machine's localhost
-  /// (the backend listens on :8000 locally). iOS simulator users should pass
-  /// http://localhost:8000/api/v1 instead.
+  /// The deployed backend is available at https://todcleaning.onrender.com/api/v1.
+  /// Local development can still override this with --dart-define=API_BASE_URL.
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:8000/api/v1',
+    defaultValue: 'https://todcleaning.onrender.com/api/v1',
   );
 
   /// How often the live position is sent to dispatch while a job is in progress.

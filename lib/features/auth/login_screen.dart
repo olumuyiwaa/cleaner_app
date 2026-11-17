@@ -55,7 +55,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       switch (result.kind) {
         case LoginKind.ok:
           await ref.read(sessionProvider.notifier).completeSignIn();
-          // The router moves on once the session is set.
+        // The router moves on once the session is set.
         case LoginKind.selectBusiness:
           if (result.choices.length == 1) {
             await _submit(businessId: result.choices.first.businessId);
@@ -112,31 +112,39 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      child: Image.asset('assets/images/logo_full.png', height: 40),
+                      child: Image.asset('assets/images/logo_full.png',
+                          height: 40),
                     ),
                     SegmentedButton<String>(
                       showSelectedIcon: false,
                       style: ButtonStyle(
                         visualDensity: VisualDensity.compact,
                         foregroundColor: WidgetStateProperty.resolveWith(
-                          (s) => s.contains(WidgetState.selected) ? Brand.navyDark : Colors.white,
+                          (s) => s.contains(WidgetState.selected)
+                              ? Brand.navyDark
+                              : Colors.white,
                         ),
                         backgroundColor: WidgetStateProperty.resolveWith(
-                          (s) => s.contains(WidgetState.selected) ? Colors.white : Colors.transparent,
+                          (s) => s.contains(WidgetState.selected)
+                              ? Colors.white
+                              : Colors.transparent,
                         ),
-                        side: const WidgetStatePropertyAll(BorderSide(color: Colors.white54)),
+                        side: const WidgetStatePropertyAll(
+                            BorderSide(color: Colors.white54)),
                       ),
                       segments: const [
                         ButtonSegment(value: 'en', label: Text('EN')),
                         ButtonSegment(value: 'nl', label: Text('NL')),
                       ],
                       selected: {lang},
-                      onSelectionChanged: (s) => ref.read(localeProvider.notifier).set(s.first),
+                      onSelectionChanged: (s) =>
+                          ref.read(localeProvider.notifier).set(s.first),
                     ),
                   ],
                 ),
@@ -162,12 +170,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 padding: const EdgeInsets.all(24),
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 420),
-                  child: _choices.isNotEmpty
-                      ? Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: _workplaceChooser(context),
-                        )
-                      : _form(context),
+                  child: Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: _choices.isNotEmpty
+                          ? Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: _workplaceChooser(context),
+                            )
+                          : _form(context),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -186,7 +199,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       const SizedBox(height: 12),
       for (final choice in _choices) ...[
         OutlinedButton(
-          onPressed: _busy ? null : () => _submit(businessId: choice.businessId),
+          onPressed:
+              _busy ? null : () => _submit(businessId: choice.businessId),
           child: Text(choice.businessName),
         ),
         const SizedBox(height: 10),
@@ -208,25 +222,29 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             textInputAction: TextInputAction.next,
             autocorrect: false,
             decoration: InputDecoration(labelText: context.t('login.email')),
-            validator: (v) =>
-                (v == null || !v.contains('@')) ? context.t('login.emailInvalid') : null,
+            validator: (v) => (v == null || !v.contains('@'))
+                ? context.t('login.emailInvalid')
+                : null,
           ),
           const SizedBox(height: 14),
           TextFormField(
             controller: _password,
             obscureText: !_showPassword,
             autofillHints: const [AutofillHints.password],
-            textInputAction: _needsCode ? TextInputAction.next : TextInputAction.done,
+            textInputAction:
+                _needsCode ? TextInputAction.next : TextInputAction.done,
             onFieldSubmitted: (_) => _needsCode ? null : _submit(),
             decoration: InputDecoration(
               labelText: context.t('login.password'),
               suffixIcon: IconButton(
-                icon: Icon(_showPassword ? Icons.visibility_off : Icons.visibility),
+                icon: Icon(
+                    _showPassword ? Icons.visibility_off : Icons.visibility),
                 onPressed: () => setState(() => _showPassword = !_showPassword),
               ),
             ),
-            validator: (v) =>
-                (v == null || v.isEmpty) ? context.t('login.passwordRequired') : null,
+            validator: (v) => (v == null || v.isEmpty)
+                ? context.t('login.passwordRequired')
+                : null,
           ),
           if (_needsCode) ...[
             const SizedBox(height: 14),
@@ -283,7 +301,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(ctx.t('common.cancel'))),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(ctx.t('common.cancel'))),
           FilledButton(
             style: FilledButton.styleFrom(minimumSize: const Size(110, 44)),
             onPressed: () => Navigator.pop(ctx, controller.text.trim()),

@@ -40,12 +40,12 @@ CI (`.github/workflows/ci.yml`) generates the platform folders, then runs
 ## Run
 
 ```bash
-flutter run --dart-define=API_BASE_URL=https://YOUR-API.onrender.com/api/v1
+flutter run --dart-define=API_BASE_URL=https://todcleaning.onrender.com/api/v1
 ```
 
 | Define | Default | Purpose |
 | --- | --- | --- |
-| `API_BASE_URL` | `http://10.0.2.2:8000/api/v1` | Backend URL including `/api/v1` (Android emulator → host). On the iOS simulator use `http://localhost:8000/api/v1`. |
+| `API_BASE_URL` | `https://todcleaning.onrender.com/api/v1` | Backend URL including `/api/v1` for the deployed API. Override for local development if needed. |
 | `STRIPE_RETURN_URL` | web portal profile page | https page Stripe returns to after payout onboarding. |
 
 ## Push notifications (optional)
