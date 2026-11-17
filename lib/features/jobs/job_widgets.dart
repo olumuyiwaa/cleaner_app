@@ -4,10 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../core/api/api_client.dart';
 import '../../core/l10n/strings.dart';
 import '../../core/widgets.dart';
+import 'job_actions.dart';
 import 'job_models.dart';
 import 'jobs_repository.dart';
+import 'offline_queue.dart';
 
 /// The cleaning checklist. Ticking an item is saved straight away; if the
 /// save fails the tick is rolled back so the screen never lies about what
@@ -45,7 +48,14 @@ class _ChecklistSectionState extends ConsumerState<ChecklistSection> {
       _items = [for (final i in _items) i.id == item.id ? i.copyWith(done: value) : i];
     });
     try {
-      await ref.read(jobsRepositoryProvider).setChecklistItem(widget.jobId, item.id, value);
+      final sent = await sendOrQueue(
+        ref,
+        kind: ActionKind.checklist,
+        jobId: widget.jobId,
+        data: {'itemId': item.id, 'done': value},
+        send: () => ref.read(jobsRepositoryProvider).setChecklistItem(widget.jobId, item.id, value),
+      );
+      if (!sent && mounted) showInfo(context, context.t('offline.queued'));
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -126,12 +136,16 @@ class PhotosSection extends ConsumerStatefulWidget {
     required this.photos,
     required this.canAdd,
     required this.onUploaded,
+    this.pending = const {},
   });
 
   final String jobId;
   final List<JobPhoto> photos;
   final bool canAdd;
   final VoidCallback onUploaded;
+
+  /// Photos waiting to be sent, by stage.
+  final Map<String, int> pending;
 
   @override
   ConsumerState<PhotosSection> createState() => _PhotosSectionState();
@@ -145,7 +159,19 @@ class _PhotosSectionState extends ConsumerState<PhotosSection> {
   final Map<String, List<Uint8List>> _local = {'BEFORE': [], 'AFTER': []};
   String? _uploading;
 
-  int _count(String stage) => widget.photos.where((p) => p.stage == stage).length;
+  @override
+  void didUpdateWidget(covariant PhotosSection old) {
+    super.didUpdateWidget(old);
+    // The server list now includes what we just added (with real URLs), so
+    // the local previews are no longer needed.
+    if (old.photos.length != widget.photos.length) {
+      _local['BEFORE']!.clear();
+      _local['AFTER']!.clear();
+    }
+  }
+
+  int _count(String stage) =>
+      widget.photos.where((p) => p.stage == stage).length + (widget.pending[stage] ?? 0);
 
   Future<void> _add(String stage) async {
     final source = await showModalBottomSheet<ImageSource>(
@@ -181,21 +207,48 @@ class _PhotosSectionState extends ConsumerState<PhotosSection> {
       if (!mounted) return;
 
       setState(() => _uploading = stage);
-      await ref.read(jobsRepositoryProvider).uploadPhoto(
-            bookingId: widget.jobId,
-            stage: stage,
-            bytes: bytes,
-            contentType: _contentTypeFor(picked.name),
-            filename: picked.name,
-          );
+      final contentType = _contentTypeFor(picked.name);
+      final sent = await _sendPhoto(stage, bytes, contentType, picked.name);
       if (!mounted) return;
       setState(() => _local[stage]!.add(bytes));
-      widget.onUploaded();
-      showInfo(context, context.t('photo.saved'));
+      if (sent) widget.onUploaded();
+      showInfo(context, sent ? context.t('photo.saved') : context.t('offline.queued'));
     } catch (e) {
       if (mounted) showError(context, e);
     } finally {
       if (mounted) setState(() => _uploading = null);
+    }
+  }
+
+  /// Uploads now, or keeps the photo on the phone until there is signal.
+  Future<bool> _sendPhoto(String stage, Uint8List bytes, String contentType, String name) async {
+    final queue = ref.read(offlineQueueProvider.notifier);
+    Future<void> queueIt() => queue.enqueuePhoto(
+          jobId: widget.jobId,
+          stage: stage,
+          bytes: bytes,
+          contentType: contentType,
+          filename: name,
+        );
+
+    if (ref.read(offlineQueueProvider).isNotEmpty) {
+      await queueIt();
+      queue.flush();
+      return false;
+    }
+    try {
+      await ref.read(jobsRepositoryProvider).uploadPhoto(
+            bookingId: widget.jobId,
+            stage: stage,
+            bytes: bytes,
+            contentType: contentType,
+            filename: name,
+          );
+      return true;
+    } on ApiException catch (e) {
+      if (!e.isNetwork) rethrow;
+      await queueIt();
+      return false;
     }
   }
 
@@ -227,10 +280,38 @@ class _PhotosSectionState extends ConsumerState<PhotosSection> {
     );
   }
 
+  void _preview(BuildContext context, ImageProvider image) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => Dialog.fullscreen(
+        backgroundColor: Colors.black,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: InteractiveViewer(child: Image(image: image, fit: BoxFit.contain)),
+            ),
+            SafeArea(
+              child: Align(
+                alignment: Alignment.topRight,
+                child: IconButton(
+                  color: Colors.white,
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(ctx),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _stage(BuildContext context, String stage, String title) {
     final count = _count(stage);
     final uploading = _uploading == stage;
     final thumbs = _local[stage]!;
+    final remote =
+        widget.photos.where((p) => p.stage == stage && p.viewUrl != null).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -261,22 +342,74 @@ class _PhotosSectionState extends ConsumerState<PhotosSection> {
               ),
           ],
         ),
-        if (thumbs.isNotEmpty) ...[
+        if (remote.isNotEmpty || thumbs.isNotEmpty) ...[
           const SizedBox(height: 10),
           SizedBox(
             height: 72,
-            child: ListView.separated(
+            child: ListView(
               scrollDirection: Axis.horizontal,
-              itemCount: thumbs.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemBuilder: (_, i) => ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: Image.memory(thumbs[i], width: 72, height: 72, fit: BoxFit.cover),
-              ),
+              children: [
+                for (final p in remote)
+                  _Thumb(
+                    onTap: () => _preview(context, NetworkImage(p.viewUrl!)),
+                    child: Image.network(
+                      p.viewUrl!,
+                      width: 72,
+                      height: 72,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const _ThumbFallback(),
+                      loadingBuilder: (_, child, progress) =>
+                          progress == null ? child : const _ThumbFallback(loading: true),
+                    ),
+                  ),
+                for (final b in thumbs)
+                  _Thumb(
+                    onTap: () => _preview(context, MemoryImage(b)),
+                    child: Image.memory(b, width: 72, height: 72, fit: BoxFit.cover),
+                  ),
+              ],
             ),
           ),
         ],
       ],
     );
   }
+}
+
+class _Thumb extends StatelessWidget {
+  const _Thumb({required this.child, required this.onTap});
+
+  final Widget child;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(right: 8),
+        child: GestureDetector(
+          onTap: onTap,
+          child: ClipRRect(borderRadius: BorderRadius.circular(10), child: child),
+        ),
+      );
+}
+
+class _ThumbFallback extends StatelessWidget {
+  const _ThumbFallback({this.loading = false});
+
+  final bool loading;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: 72,
+        height: 72,
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        child: loading
+            ? const Center(
+                child: SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              )
+            : const Icon(Icons.broken_image_outlined),
+      );
 }

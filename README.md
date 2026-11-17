@@ -5,8 +5,14 @@ as the web cleaner portal (`olumuyiwaa/lady`).
 
 **Features:** sign-in (with 2FA and workplace choice), today / upcoming / past jobs,
 job detail (access notes, navigate, call), "on my way", GPS check-in and complete,
-checklist, before/after photos, customer chat, earnings, availability, time off,
-documents, Stripe payout setup, push notifications, English and Dutch.
+checklist, before/after photos (with thumbnails), customer chat, earnings,
+availability, time off, documents, Stripe payout setup, password reset, change
+password, two-factor setup, push notifications, English and Dutch.
+
+**Works offline:** "on my way", check-in, checklist ticks, photos and "complete" are
+saved on the phone when there is no signal and sent in order once it returns
+(a banner shows what is waiting). If the server refuses a saved change, the
+cleaner is told.
 
 ## First-time setup
 
@@ -20,7 +26,16 @@ flutter analyze
 flutter test
 ```
 
-Needs Flutter 3.27 or newer.
+Needs Flutter 3.27 or newer. Then, once, for the icon and launch screen
+(the source image is `assets/images/logo_mark.png`; swap in a 1024x1024 version for sharper icons):
+
+```bash
+dart run flutter_launcher_icons
+dart run flutter_native_splash:create
+```
+
+CI (`.github/workflows/ci.yml`) generates the platform folders, then runs
+`flutter analyze` and `flutter test` on every push.
 
 ## Run
 
@@ -43,18 +58,22 @@ Without them the app still works; it just does not register for push.
 
 - This code was written without access to a Flutter toolchain, so it has **not been
   compiled or run yet**. Expect to fix a few small analyzer errors on first build.
-- The API does not give cleaners image URLs for job photos, so only photos added
-  in the current visit show as thumbnails; the count is always accurate.
+- Job photo thumbnails need the backend change that returns `viewUrl` for each photo
+  (already in `olumuyiwaa/lady` main).
 - Location is best effort: if GPS is off or denied, check-in still goes to the
   server, which decides whether that is acceptable.
-- Live location pings (every 60 s) only run while the job screen is open and the
-  job is in progress.
+- While a job is in progress the phone sends its position about once a minute, also
+  with the app in the background (Android shows a notification while it does;
+  iOS shows the blue location indicator). It stops when the job is completed.
+- An action whose reply was lost in transit may be sent twice when the queue
+  replays; the server rejects the duplicate and the cleaner sees that message.
+- Password reset uses the emailed link, which opens the web reset page.
 
 ## Structure
 
 ```
 lib/core        config, API client (token refresh), router, theme, l10n, push
 lib/features    auth, jobs, earnings, profile
-test            strings and model tests
+test            strings, models and offline queue tests
 tool            platform permission script
 ```

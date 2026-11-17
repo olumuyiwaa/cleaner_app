@@ -20,6 +20,8 @@ if manifest.exists():
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.CAMERA",
         "android.permission.POST_NOTIFICATIONS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_LOCATION",
     ]
     add = "".join(
         f'    <uses-permission android:name="{p}"/>\n' for p in perms if p not in text
@@ -34,6 +36,12 @@ if manifest.exists():
             "    </queries>\n"
         )
         text = text.replace("<application", queries + "    <application", 1)
+    if "com.baseflow.geolocator.GeolocatorLocationService" not in text:
+        service = (
+            '        <service android:name="com.baseflow.geolocator.GeolocatorLocationService"\n'
+            '            android:foregroundServiceType="location" android:exported="false"/>\n'
+        )
+        text = text.replace("</application>", service + "    </application>", 1)
     manifest.write_text(text)
     print("Android manifest updated")
 else:
@@ -51,6 +59,8 @@ if plist.exists():
     add = "".join(
         f"\t<key>{k}</key>\n\t<string>{v}</string>\n" for k, v in keys.items() if k not in text
     )
+    if "UIBackgroundModes" not in text:
+        add += "\t<key>UIBackgroundModes</key>\n\t<array>\n\t\t<string>location</string>\n\t</array>\n"
     if add:
         text = text.replace("</dict>\n</plist>", add + "</dict>\n</plist>")
         plist.write_text(text)

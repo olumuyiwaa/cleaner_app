@@ -9,11 +9,13 @@ import '../features/earnings/earnings_screen.dart';
 import '../features/jobs/job_chat_screen.dart';
 import '../features/jobs/job_detail_screen.dart';
 import '../features/jobs/jobs_screen.dart';
+import '../features/jobs/offline_ui.dart';
 import '../features/profile/availability_screen.dart';
 import '../features/profile/documents_screen.dart';
 import '../features/profile/leave_screen.dart';
 import '../features/profile/payouts_screen.dart';
 import '../features/profile/profile_screen.dart';
+import '../features/profile/security_screen.dart';
 import 'l10n/strings.dart';
 
 final _rootKey = GlobalKey<NavigatorState>(debugLabel: 'root');
@@ -85,6 +87,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, __) => const DocumentsScreen(),
       ),
       GoRoute(
+        path: '/security',
+        parentNavigatorKey: _rootKey,
+        builder: (_, __) => const SecurityScreen(),
+      ),
+      GoRoute(
         path: '/payouts',
         parentNavigatorKey: _rootKey,
         builder: (_, __) => const PayoutsScreen(),
@@ -101,7 +108,7 @@ class _Shell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: shell,
+      body: QueueWatcher(child: shell),
       bottomNavigationBar: NavigationBar(
         selectedIndex: shell.currentIndex,
         onDestinationSelected: (i) =>

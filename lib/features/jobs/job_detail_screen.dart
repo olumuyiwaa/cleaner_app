@@ -1,21 +1,21 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../core/config.dart';
 import '../../core/format.dart';
 import '../../core/l10n/strings.dart';
 import '../../core/providers.dart';
 import '../../core/widgets.dart';
 import 'job_models.dart';
 import 'job_ui.dart';
+import 'job_actions.dart';
 import 'job_widgets.dart';
+import 'offline_queue.dart';
 import 'jobs_providers.dart';
 import 'jobs_repository.dart';
+import 'live_location.dart';
 
 class JobDetailScreen extends ConsumerStatefulWidget {
   const JobDetailScreen({super.key, required this.jobId});
@@ -28,13 +28,6 @@ class JobDetailScreen extends ConsumerStatefulWidget {
 
 class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
   bool _busy = false;
-  Timer? _pingTimer;
-
-  @override
-  void dispose() {
-    _pingTimer?.cancel();
-    super.dispose();
-  }
 
   void _refresh() {
     ref.invalidate(jobProvider(widget.jobId));
@@ -42,13 +35,13 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
   }
 
   /// Runs a server action with a busy state, then refreshes the job.
-  Future<void> _run(Future<void> Function() action, {String? success}) async {
+  Future<void> _run(Future<bool> Function() action, {String? success}) async {
     setState(() => _busy = true);
     try {
-      await action();
+      final sent = await action();
       if (!mounted) return;
       _refresh();
-      if (success != null) showInfo(context, success);
+      showInfo(context, sent ? (success ?? '') : context.t('offline.queued'));
     } catch (e) {
       if (mounted) showError(context, e);
     } finally {
@@ -56,38 +49,37 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
     }
   }
 
-  /// While the job is in progress, send our position to the dispatch map.
+  /// While the job is in progress, keep dispatch updated (also in the
+  /// background); stop as soon as it is finished.
   void _syncPing(bool working) {
-    if (working && _pingTimer == null) {
-      _ping();
-      _pingTimer = Timer.periodic(AppConfig.locationPingInterval, (_) => _ping());
-    } else if (!working && _pingTimer != null) {
-      _pingTimer!.cancel();
-      _pingTimer = null;
-    }
-  }
-
-  Future<void> _ping() async {
-    final at = await ref
-        .read(locationServiceProvider)
-        .currentPosition(timeout: const Duration(seconds: 5));
-    if (at == null) return;
-    try {
-      await ref.read(jobsRepositoryProvider).pingLocation(at);
-    } catch (_) {
-      // Pings are best effort.
+    final live = ref.read(liveLocationProvider.notifier);
+    if (working) {
+      live.start(widget.jobId);
+    } else if (ref.read(liveLocationProvider) == widget.jobId) {
+      live.stop();
     }
   }
 
   Future<void> _onMyWay() => _run(
-        () => ref.read(jobsRepositoryProvider).onMyWay(widget.jobId),
+        () => sendOrQueue(
+          ref,
+          kind: ActionKind.onMyWay,
+          jobId: widget.jobId,
+          send: () => ref.read(jobsRepositoryProvider).onMyWay(widget.jobId),
+        ),
         success: context.t('job.onMyWaySent'),
       );
 
   Future<void> _checkIn() => _run(
         () async {
           final at = await ref.read(locationServiceProvider).currentPosition();
-          await ref.read(jobsRepositoryProvider).checkInAndStart(widget.jobId, at);
+          return sendOrQueue(
+            ref,
+            kind: ActionKind.start,
+            jobId: widget.jobId,
+            data: {if (at != null) 'lat': at.lat, if (at != null) 'lng': at.lng},
+            send: () => ref.read(jobsRepositoryProvider).checkInAndStart(widget.jobId, at),
+          );
         },
         success: context.t('job.checkedIn'),
       );
@@ -98,9 +90,19 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
     await _run(
       () async {
         final at = await ref.read(locationServiceProvider).currentPosition();
-        await ref
-            .read(jobsRepositoryProvider)
-            .complete(widget.jobId, at: at, notes: notes);
+        return sendOrQueue(
+          ref,
+          kind: ActionKind.complete,
+          jobId: widget.jobId,
+          data: {
+            if (at != null) 'lat': at.lat,
+            if (at != null) 'lng': at.lng,
+            if (notes.isNotEmpty) 'notes': notes,
+          },
+          send: () => ref
+              .read(jobsRepositoryProvider)
+              .complete(widget.jobId, at: at, notes: notes),
+        );
       },
       success: context.t('job.completed'),
     );
@@ -114,7 +116,9 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
         context.t('job.warnChecklist', {
           'n': '${job.checklist.length - job.checklistDone}',
         }),
-      if (job.photoCount('AFTER') == 0) context.t('job.warnPhotos'),
+      if (job.photoCount('AFTER') + pendingPhotos(ref.read(offlineQueueProvider), job.id, 'AFTER') ==
+          0)
+        context.t('job.warnPhotos'),
     ];
 
     return showDialog<String>(
@@ -184,6 +188,8 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final job = ref.watch(jobProvider(widget.jobId));
+    final queue = ref.watch(offlineQueueProvider);
+    final waiting = queue.where((a) => a.jobId == widget.jobId).length;
 
     return Scaffold(
       appBar: AppBar(title: Text(context.t('job.title'))),
@@ -202,14 +208,14 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
               _refresh();
               await ref.read(jobProvider(widget.jobId).future);
             },
-            child: _body(context, job),
+            child: _body(context, applyPending(job, queue), waiting),
           );
         },
       ),
     );
   }
 
-  Widget _body(BuildContext context, Job job) {
+  Widget _body(BuildContext context, Job job, int waiting) {
     final f = context.fmt;
     final hint = Theme.of(context).hintColor;
     final phase = job.phase;
@@ -219,6 +225,11 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
       children: [
+        if (waiting > 0) ...[
+          _banner(context, Icons.cloud_upload_outlined,
+              context.t('offline.waiting', {'n': '$waiting'}), const Color(0xFFD98200)),
+          const SizedBox(height: 12),
+        ],
         // When and what
         Card(
           child: Padding(
@@ -354,6 +365,10 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
           PhotosSection(
             jobId: job.id,
             photos: job.photos,
+            pending: {
+              'BEFORE': pendingPhotos(ref.watch(offlineQueueProvider), job.id, 'BEFORE'),
+              'AFTER': pendingPhotos(ref.watch(offlineQueueProvider), job.id, 'AFTER'),
+            },
             canAdd: working,
             onUploaded: _refresh,
           ),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api/api_client.dart';
 import '../../core/providers.dart';
 import '../../core/push_service.dart';
+import '../jobs/live_location.dart';
 import 'auth_models.dart';
 import 'auth_repository.dart';
 
@@ -50,6 +51,7 @@ class SessionController extends AsyncNotifier<CleanerProfile?> {
   }
 
   Future<void> signOut() async {
+    await ref.read(liveLocationProvider.notifier).stop();
     await ref.read(pushServiceProvider).stop();
     await ref.read(authRepositoryProvider).logout();
     state = const AsyncData(null);

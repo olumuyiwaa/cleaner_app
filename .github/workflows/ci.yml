@@ -1,0 +1,22 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      # The repo holds only the Dart code; generate the native shells for the build.
+      - name: Generate platform folders
+        run: flutter create --org nl.todcleaning --project-name cleaner_app --platforms android,ios .
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test

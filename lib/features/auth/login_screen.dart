@@ -213,9 +213,52 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   )
                 : Text(context.t('login.signIn')),
           ),
+          TextButton(
+            onPressed: _busy ? null : _forgotPassword,
+            child: Text(context.t('forgot.link')),
+          ),
         ],
       ),
     );
+  }
+
+  Future<void> _forgotPassword() async {
+    final controller = TextEditingController(text: _email.text.trim());
+    final email = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(ctx.t('forgot.title')),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(ctx.t('forgot.body')),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              keyboardType: TextInputType.emailAddress,
+              autocorrect: false,
+              decoration: InputDecoration(labelText: ctx.t('login.email')),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(ctx.t('common.cancel'))),
+          FilledButton(
+            style: FilledButton.styleFrom(minimumSize: const Size(110, 44)),
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: Text(ctx.t('forgot.send')),
+          ),
+        ],
+      ),
+    );
+    if (email == null || !email.contains('@') || !mounted) return;
+    try {
+      await ref.read(authRepositoryProvider).requestPasswordReset(email);
+      if (mounted) showInfo(context, context.t('forgot.sent'));
+    } catch (e) {
+      if (mounted) showError(context, e);
+    }
   }
 
   Widget _errorBox(BuildContext context) {

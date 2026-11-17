@@ -156,6 +156,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 _nav(context, Icons.beach_access_outlined, 'profile.leave', '/leave'),
                 _nav(context, Icons.folder_outlined, 'profile.documents', '/documents'),
                 _nav(context, Icons.account_balance_outlined, 'profile.payouts', '/payouts'),
+                _nav(context, Icons.security_outlined, 'profile.security', '/security'),
               ],
             ),
           ),

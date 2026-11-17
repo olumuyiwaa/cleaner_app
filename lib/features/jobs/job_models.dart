@@ -20,9 +20,12 @@ class ChecklistItem {
 }
 
 class JobPhoto {
-  const JobPhoto({required this.id, required this.stage});
+  const JobPhoto({required this.id, required this.stage, this.viewUrl});
 
   final String id;
+
+  /// Short-lived signed image URL (null if the server could not sign one).
+  final String? viewUrl;
 
   /// 'BEFORE' or 'AFTER'
   final String stage;
@@ -30,6 +33,7 @@ class JobPhoto {
   factory JobPhoto.fromJson(Map<String, dynamic> j) => JobPhoto(
         id: str(j['id']) ?? '',
         stage: str(j['stage']) ?? 'BEFORE',
+        viewUrl: str(j['viewUrl']),
       );
 }
 
@@ -47,6 +51,15 @@ class Assignment {
   final DateTime? onMyWayAt;
   final DateTime? checkedInAt;
   final DateTime? checkedOutAt;
+
+  Assignment copyWith({DateTime? onMyWayAt, DateTime? checkedInAt, DateTime? checkedOutAt}) =>
+      Assignment(
+        id: id,
+        isTeamLead: isTeamLead,
+        onMyWayAt: onMyWayAt ?? this.onMyWayAt,
+        checkedInAt: checkedInAt ?? this.checkedInAt,
+        checkedOutAt: checkedOutAt ?? this.checkedOutAt,
+      );
 
   factory Assignment.fromJson(Map<String, dynamic> j) => Assignment(
         id: str(j['id']) ?? '',
@@ -145,6 +158,35 @@ class Job {
         petNotes,
         specialInstructions,
       ].any((s) => s != null && s.isNotEmpty);
+
+  /// This job with not-yet-sent offline actions applied on top.
+  Job copyWithPending({required Assignment assignment, required List<ChecklistItem> checklist}) =>
+      Job(
+        id: id,
+        status: status,
+        start: start,
+        end: end,
+        serviceName: serviceName,
+        addressLine1: addressLine1,
+        addressLine2: addressLine2,
+        city: city,
+        postalCode: postalCode,
+        latitude: latitude,
+        longitude: longitude,
+        accessCode: accessCode,
+        keyLocation: keyLocation,
+        parkingInstructions: parkingInstructions,
+        petNotes: petNotes,
+        specialInstructions: specialInstructions,
+        customerFirstName: customerFirstName,
+        customerLastName: customerLastName,
+        customerPhone: customerPhone,
+        extras: extras,
+        assignment: assignment,
+        checklist: checklist,
+        hasChecklist: hasChecklist,
+        photos: photos,
+      );
 
   Job copyWithChecklist(List<ChecklistItem> items) => Job(
         id: id,

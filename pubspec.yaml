@@ -27,6 +27,8 @@ dependencies:
   image_picker: ^1.1.2
   file_picker: ^8.0.7
   url_launcher: ^6.3.0
+  connectivity_plus: ^6.0.5
+  path_provider: ^2.1.4
 
   # Push notifications (optional at runtime: the app works without Firebase config)
   firebase_core: ^3.4.0
@@ -36,8 +38,27 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.14.1
+  flutter_native_splash: ^2.4.1
 
 flutter:
   uses-material-design: true
   assets:
     - assets/images/
+
+# App icon and launch screen (run once: dart run flutter_launcher_icons && dart run flutter_native_splash:create)
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/images/logo_mark.png
+  remove_alpha_ios: true
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: assets/images/logo_mark.png
+
+flutter_native_splash:
+  color: "#FFFFFF"
+  image: assets/images/logo_mark.png
+  color_dark: "#0B1220"
+  android_12:
+    color: "#FFFFFF"
+    image: assets/images/logo_mark.png
