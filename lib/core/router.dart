@@ -17,6 +17,7 @@ import '../features/profile/payouts_screen.dart';
 import '../features/profile/profile_screen.dart';
 import '../features/profile/security_screen.dart';
 import 'l10n/strings.dart';
+import 'theme.dart';
 
 final _rootKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 
@@ -53,10 +54,12 @@ final routerProvider = Provider<GoRouter>((ref) {
             GoRoute(path: '/jobs', builder: (_, __) => const JobsScreen()),
           ]),
           StatefulShellBranch(routes: [
-            GoRoute(path: '/earnings', builder: (_, __) => const EarningsScreen()),
+            GoRoute(
+                path: '/earnings', builder: (_, __) => const EarningsScreen()),
           ]),
           StatefulShellBranch(routes: [
-            GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
+            GoRoute(
+                path: '/profile', builder: (_, __) => const ProfileScreen()),
           ]),
         ],
       ),
@@ -64,12 +67,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/job/:id',
         parentNavigatorKey: _rootKey,
-        builder: (_, state) => JobDetailScreen(jobId: state.pathParameters['id']!),
+        builder: (_, state) =>
+            JobDetailScreen(jobId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: '/job/:id/chat',
         parentNavigatorKey: _rootKey,
-        builder: (_, state) => JobChatScreen(jobId: state.pathParameters['id']!),
+        builder: (_, state) =>
+            JobChatScreen(jobId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: '/availability',
@@ -109,27 +114,100 @@ class _Shell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: QueueWatcher(child: shell),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: shell.currentIndex,
-        onDestinationSelected: (i) =>
-            shell.goBranch(i, initialLocation: i == shell.currentIndex),
-        destinations: [
-          NavigationDestination(
-            icon: const Icon(Icons.work_outline),
-            selectedIcon: const Icon(Icons.work),
-            label: context.t('nav.jobs'),
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.payments_outlined),
-            selectedIcon: const Icon(Icons.payments),
-            label: context.t('nav.earnings'),
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.person_outline),
-            selectedIcon: const Icon(Icons.person),
-            label: context.t('nav.profile'),
-          ),
-        ],
+      // Transparent bottom bar area so our floating pill sits above it.
+      extendBody: true,
+      bottomNavigationBar: _PillNavBar(shell: shell),
+    );
+  }
+}
+
+/// A floating dark-pill bottom navigation bar matching the UI guide.
+class _PillNavBar extends StatelessWidget {
+  const _PillNavBar({required this.shell});
+
+  final StatefulNavigationShell shell;
+
+  @override
+  Widget build(BuildContext context) {
+    final items = [
+      (Icons.home_rounded, Icons.home_rounded, context.t('nav.jobs')),
+      (
+        Icons.bar_chart_rounded,
+        Icons.bar_chart_rounded,
+        context.t('nav.earnings')
+      ),
+      (Icons.list_alt_rounded, Icons.list_alt_rounded, context.t('nav.jobs')),
+      (Icons.person_rounded, Icons.person_rounded, context.t('nav.profile')),
+    ];
+
+    // Map 4 visual tabs → 3 actual branches (middle two share earnings).
+    int branchIndex(int i) => switch (i) {
+          0 => 0,
+          1 => 1,
+          2 => 1,
+          _ => 2,
+        };
+
+    // Which visual tab is "selected" based on current branch.
+    int visualIndex() => switch (shell.currentIndex) {
+          0 => 0,
+          1 => 1,
+          _ => 3,
+        };
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 28),
+      child: Container(
+        height: 68,
+        decoration: BoxDecoration(
+          color: Brand.pillNav,
+          borderRadius: BorderRadius.circular(40),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.28),
+              blurRadius: 24,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: List.generate(items.length, (i) {
+            final selected = visualIndex() == i;
+            final icon = selected ? items[i].$2 : items[i].$1;
+            return Expanded(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {
+                  final branch = branchIndex(i);
+                  shell.goBranch(
+                    branch,
+                    initialLocation: branch == shell.currentIndex,
+                  );
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeInOut,
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? Colors.white.withValues(alpha: 0.15)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(28),
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 26,
+                    color: selected
+                        ? Colors.white
+                        : Colors.white.withValues(alpha: 0.45),
+                  ),
+                ),
+              ),
+            );
+          }),
+        ),
       ),
     );
   }

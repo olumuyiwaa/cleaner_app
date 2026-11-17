@@ -76,9 +76,11 @@ class EarningsSummary {
       );
 }
 
-final earningsProvider = FutureProvider.autoDispose<EarningsSummary>((ref) async {
+final earningsProvider =
+    FutureProvider.autoDispose<EarningsSummary>((ref) async {
   final ApiClient api = ref.watch(apiClientProvider);
-  return EarningsSummary.fromJson(mapOf(await api.get('/cleaners/me/earnings')));
+  return EarningsSummary.fromJson(
+      mapOf(await api.get('/cleaners/me/earnings')));
 });
 
 class EarningsScreen extends ConsumerWidget {
@@ -92,7 +94,8 @@ class EarningsScreen extends ConsumerWidget {
       appBar: AppBar(title: Text(context.t('earnings.title'))),
       body: data.when(
         loading: () => const SkeletonList(),
-        error: (e, _) => ErrorView(error: e, onRetry: () => ref.invalidate(earningsProvider)),
+        error: (e, _) => ErrorView(
+            error: e, onRetry: () => ref.invalidate(earningsProvider)),
         data: (s) => RefreshIndicator(
           onRefresh: () async {
             ref.invalidate(earningsProvider);
@@ -110,55 +113,81 @@ class EarningsScreen extends ConsumerWidget {
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 112),
       children: [
+        // Dark hero card — matches the mockup's balance card style
         Container(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(22),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Brand.navy, Brand.navyDark],
-            ),
+            borderRadius: BorderRadius.circular(24),
+            color: Brand.pillNav,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                context.t('earnings.pending'),
-                style: const TextStyle(color: Colors.white70, fontSize: 14),
+              Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.account_balance_wallet_rounded,
+                        color: Colors.white, size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    context.t('earnings.pending'),
+                    style: const TextStyle(color: Colors.white70, fontSize: 14),
+                  ),
+                ],
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 14),
               Text(
                 f.money(s.pendingCents),
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 38,
+                  fontSize: 36,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.5,
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 18),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
+                  color: Colors.white.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(14),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.check_circle, size: 18, color: Color(0xFF9BE15D)),
-                    const SizedBox(width: 8),
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: Brand.green.withValues(alpha: 0.25),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.check_rounded,
+                          size: 16, color: Color(0xFF9BE15D)),
+                    ),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         context.t('earnings.paid'),
-                        style: const TextStyle(color: Colors.white70),
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 13),
                       ),
                     ),
                     Text(
                       f.money(s.lifetimePaidCents),
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15),
                     ),
                   ],
                 ),
@@ -166,7 +195,7 @@ class EarningsScreen extends ConsumerWidget {
             ],
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
         OutlinedButton.icon(
           onPressed: () => context.push('/payouts'),
           icon: const Icon(Icons.account_balance_outlined),
@@ -176,7 +205,8 @@ class EarningsScreen extends ConsumerWidget {
         if (s.earnings.isEmpty)
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Text(context.t('earnings.emptyEarnings'), style: TextStyle(color: hint)),
+            child: Text(context.t('earnings.emptyEarnings'),
+                style: TextStyle(color: hint)),
           )
         else
           Card(
@@ -186,12 +216,15 @@ class EarningsScreen extends ConsumerWidget {
                   ListTile(
                     title: Text(f.money(e.amountCents),
                         style: const TextStyle(fontWeight: FontWeight.w700)),
-                    subtitle: Text(e.earnedAt == null ? '' : f.date(e.earnedAt!)),
+                    subtitle:
+                        Text(e.earnedAt == null ? '' : f.date(e.earnedAt!)),
                     trailing: StatusPill(
                       label: _earningLabel(context, e.status),
                       color: e.status == 'PAID'
                           ? Brand.green
-                          : (e.status == 'IN_PAYOUT' ? Brand.blue : const Color(0xFFD98200)),
+                          : (e.status == 'IN_PAYOUT'
+                              ? Brand.blue
+                              : const Color(0xFFD98200)),
                     ),
                   ),
               ],
@@ -201,7 +234,8 @@ class EarningsScreen extends ConsumerWidget {
         if (s.payouts.isEmpty)
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Text(context.t('earnings.emptyPayouts'), style: TextStyle(color: hint)),
+            child: Text(context.t('earnings.emptyPayouts'),
+                style: TextStyle(color: hint)),
           )
         else
           Card(
@@ -216,7 +250,8 @@ class EarningsScreen extends ConsumerWidget {
                           ? '${f.date(p.periodStart!)} – ${f.date(p.periodEnd!)}'
                           : '',
                     ),
-                    trailing: Text(p.status, style: TextStyle(color: hint, fontSize: 12)),
+                    trailing: Text(p.status,
+                        style: TextStyle(color: hint, fontSize: 12)),
                   ),
               ],
             ),

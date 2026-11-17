@@ -21,13 +21,18 @@ class JobsScreen extends ConsumerWidget {
     return DefaultTabController(
       length: JobsTab.values.length,
       child: Scaffold(
+        // extendBodyBehindAppBar so hero card can sit flush under the status bar
+        extendBodyBehindAppBar: false,
         appBar: AppBar(
+          titleSpacing: 20,
           title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                name.isEmpty ? context.t('jobs.title') : context.t('jobs.hi', {'name': name}),
+                name.isEmpty
+                    ? context.t('jobs.title')
+                    : context.t('jobs.hi', {'name': name}),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -42,32 +47,39 @@ class JobsScreen extends ConsumerWidget {
           ),
           actions: [
             Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: IconButton(
-                tooltip: context.t('nav.profile'),
-                onPressed: () => context.go('/profile'),
-                icon: CircleAvatar(
-                  radius: 19,
-                  backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                  foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
-                  backgroundImage:
-                      profile?.avatarUrl == null ? null : NetworkImage(profile!.avatarUrl!),
+              padding: const EdgeInsets.only(right: 20),
+              child: GestureDetector(
+                onTap: () => context.go('/profile'),
+                child: CircleAvatar(
+                  radius: 20,
+                  backgroundColor:
+                      Theme.of(context).colorScheme.primaryContainer,
+                  foregroundColor:
+                      Theme.of(context).colorScheme.onPrimaryContainer,
+                  backgroundImage: profile?.avatarUrl == null
+                      ? null
+                      : NetworkImage(profile!.avatarUrl!),
                   child: profile?.avatarUrl == null
                       ? Text(
                           profile?.initials ?? '?',
-                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                          style: const TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w700),
                         )
                       : null,
                 ),
               ),
             ),
           ],
-          bottom: TabBar(
-            tabs: [
-              Tab(text: context.t('jobs.today')),
-              Tab(text: context.t('jobs.upcoming')),
-              Tab(text: context.t('jobs.past')),
-            ],
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(48),
+            child: TabBar(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              tabs: [
+                Tab(text: context.t('jobs.today')),
+                Tab(text: context.t('jobs.upcoming')),
+                Tab(text: context.t('jobs.past')),
+              ],
+            ),
           ),
         ),
         body: const TabBarView(
@@ -93,7 +105,8 @@ class _JobsList extends ConsumerWidget {
 
     return jobs.when(
       loading: () => const SkeletonList(),
-      error: (e, _) => ErrorView(error: e, onRetry: () => ref.invalidate(jobsProvider(tab))),
+      error: (e, _) =>
+          ErrorView(error: e, onRetry: () => ref.invalidate(jobsProvider(tab))),
       data: (list) {
         Future<void> refresh() async {
           ref.invalidate(jobsProvider(tab));
@@ -111,7 +124,9 @@ class _JobsList extends ConsumerWidget {
                   child: EmptyView(
                     icon: Icons.event_available_outlined,
                     title: context.t('jobs.empty.$tabKey'),
-                    message: tab == JobsTab.today ? context.t('jobs.empty.todayHint') : null,
+                    message: tab == JobsTab.today
+                        ? context.t('jobs.empty.todayHint')
+                        : null,
                   ),
                 ),
               ],
@@ -122,7 +137,8 @@ class _JobsList extends ConsumerWidget {
         // On the Today tab the first job that is not finished is "next up".
         final nextIndex = tab == JobsTab.today
             ? list.indexWhere(
-                (j) => j.phase != JobPhase.done && j.phase != JobPhase.cancelled,
+                (j) =>
+                    j.phase != JobPhase.done && j.phase != JobPhase.cancelled,
               )
             : -1;
         final header = tab == JobsTab.today ? 1 : 0;
@@ -131,9 +147,11 @@ class _JobsList extends ConsumerWidget {
           onRefresh: refresh,
           child: ListView.separated(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+            // Extra bottom padding for the floating pill nav
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 112),
             itemCount: list.length + header,
-            separatorBuilder: (_, i) => SizedBox(height: i == 0 && header == 1 ? 14 : 12),
+            separatorBuilder: (_, i) =>
+                SizedBox(height: i == 0 && header == 1 ? 14 : 10),
             itemBuilder: (context, i) {
               if (header == 1 && i == 0) return _TodayHeader(jobs: list);
               final index = i - header;
@@ -164,7 +182,6 @@ class _TodayHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final f = context.fmt;
     final left = jobs
         .where((j) => j.phase != JobPhase.done && j.phase != JobPhase.cancelled)
         .length;
@@ -174,23 +191,11 @@ class _TodayHeader extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            f.dayLong(DateTime.now()),
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).hintColor,
-                ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            left == 0 ? context.t('jobs.allDone') : summary,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-          ),
-        ],
+      child: Text(
+        left == 0 ? context.t('jobs.allDone') : summary,
+        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
       ),
     );
   }
@@ -224,93 +229,122 @@ class JobCard extends StatelessWidget {
     final f = context.fmt;
     final hint = Theme.of(context).hintColor;
     final color = phaseColor(job.phase);
-    final active = job.phase == JobPhase.working || job.phase == JobPhase.onTheWay;
+    final active =
+        job.phase == JobPhase.working || job.phase == JobPhase.onTheWay;
     final muted = job.phase == JobPhase.done || job.phase == JobPhase.cancelled;
     final duration = _duration(context, job.start, job.end);
 
     return Opacity(
-      opacity: muted ? 0.72 : 1,
-      child: Card(
-        clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
-          side: BorderSide(
-            color: (active || nextUp) ? color : Theme.of(context).dividerColor,
-            width: (active || nextUp) ? 1.5 : 1,
-          ),
-        ),
+      opacity: muted ? 0.70 : 1,
+      child: Material(
+        color: Theme.of(context).cardTheme.color,
+        borderRadius: BorderRadius.circular(20),
         child: InkWell(
           onTap: onTap,
-          child: IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Container(width: 6, color: color),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (nextUp && !active) ...[
-                          Text(
-                            context.t('jobs.nextUp').toUpperCase(),
-                            style: TextStyle(
-                              fontSize: 11,
-                              letterSpacing: 1.1,
-                              fontWeight: FontWeight.w800,
-                              color: color,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                        ],
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (showDate)
-                                    Text(
-                                      f.day(job.start),
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color: hint,
-                                      ),
-                                    ),
-                                  Text(
-                                    f.timeRange(job.start, job.end),
-                                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                          fontWeight: FontWeight.w800,
-                                        ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            JobStatusPill(job: job),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          job.serviceName,
-                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-                        ),
-                        const SizedBox(height: 8),
-                        _line(Icons.place_outlined, job.address, hint),
-                        if (job.customerFirstName.isNotEmpty)
-                          _line(Icons.person_outline, job.customerName, hint),
-                        if (duration.isNotEmpty) _line(Icons.timer_outlined, duration, hint),
-                      ],
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: (active || nextUp)
+                    ? color.withValues(alpha: 0.5)
+                    : Theme.of(context).dividerColor,
+                width: (active || nextUp) ? 1.5 : 1,
+              ),
+            ),
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Left color accent bar
+                  Container(
+                    width: 5,
+                    decoration: BoxDecoration(
+                      color: color,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(20),
+                        bottomLeft: Radius.circular(20),
+                      ),
                     ),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: Icon(Icons.chevron_right, color: hint),
-                ),
-              ],
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(14, 14, 10, 14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (nextUp && !active) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: color.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                context.t('jobs.nextUp').toUpperCase(),
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  letterSpacing: 0.9,
+                                  fontWeight: FontWeight.w800,
+                                  color: color,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                          ],
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (showDate)
+                                      Text(
+                                        f.day(job.start),
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: hint,
+                                        ),
+                                      ),
+                                    Text(
+                                      f.timeRange(job.start, job.end),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleLarge
+                                          ?.copyWith(
+                                              fontWeight: FontWeight.w800),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              JobStatusPill(job: job),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            job.serviceName,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w700, fontSize: 15),
+                          ),
+                          const SizedBox(height: 6),
+                          _line(Icons.place_outlined, job.address, hint),
+                          if (job.customerFirstName.isNotEmpty)
+                            _line(Icons.person_outline, job.customerName, hint),
+                          if (duration.isNotEmpty)
+                            _line(Icons.timer_outlined, duration, hint),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: Icon(Icons.chevron_right, color: hint, size: 20),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -319,13 +353,15 @@ class JobCard extends StatelessWidget {
   }
 
   Widget _line(IconData icon, String text, Color color) => Padding(
-        padding: const EdgeInsets.only(top: 4),
+        padding: const EdgeInsets.only(top: 3),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, size: 17, color: color),
-            const SizedBox(width: 6),
-            Expanded(child: Text(text, style: TextStyle(color: color))),
+            Icon(icon, size: 15, color: color),
+            const SizedBox(width: 5),
+            Expanded(
+                child:
+                    Text(text, style: TextStyle(color: color, fontSize: 13))),
           ],
         ),
       );

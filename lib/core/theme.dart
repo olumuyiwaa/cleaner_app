@@ -8,6 +8,10 @@ class Brand {
   static const Color navyDark = Color(0xFF0B2A5B);
   static const Color green = Color(0xFF5BA11D);
   static const Color blue = Color(0xFF2F6DB5);
+
+  // UI guide palette — dark card background, pill nav
+  static const Color cardDark = Color(0xFF1A1A2E);
+  static const Color pillNav = Color(0xFF1C1C1E);
 }
 
 OutlineInputBorder _inputBorder(Color color, {double width = 1}) =>
@@ -40,7 +44,7 @@ class AppTheme {
       useMaterial3: true,
       colorScheme: scheme,
       scaffoldBackgroundColor:
-          isLight ? const Color(0xFFF5F7FB) : const Color(0xFF0E1420),
+          isLight ? const Color(0xFFF2F2F7) : const Color(0xFF0E1420),
       textTheme: textTheme.apply(
         bodyColor: isLight ? const Color(0xFF25334A) : const Color(0xFFE7ECF5),
         displayColor: isLight ? Brand.navyDark : Colors.white,
@@ -64,12 +68,12 @@ class AppTheme {
         elevation: isLight ? 1 : 0,
         margin: EdgeInsets.zero,
         color: isLight ? Colors.white : const Color(0xFF172033),
-        shadowColor: Brand.navy.withValues(alpha: 0.06),
+        shadowColor: Brand.navy.withValues(alpha: 0.08),
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(22),
           side: BorderSide(
-            color: isLight ? const Color(0xFFE8ECF3) : const Color(0xFF263149),
+            color: isLight ? const Color(0xFFEBEEF5) : const Color(0xFF263149),
           ),
         ),
       ),
@@ -125,13 +129,14 @@ class AppTheme {
         unselectedLabelStyle:
             const TextStyle(fontWeight: FontWeight.w500, fontSize: 15),
         indicator: UnderlineTabIndicator(
-          borderSide: BorderSide(color: Brand.green, width: 3),
-          borderRadius: BorderRadius.circular(3),
+          borderSide: const BorderSide(color: Brand.green, width: 3),
+          borderRadius: const BorderRadius.all(Radius.circular(3)),
         ),
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: isLight ? Colors.white : const Color(0xFF172033),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(22))),
       ),
       bottomSheetTheme: BottomSheetThemeData(
         showDragHandle: true,
@@ -143,7 +148,8 @@ class AppTheme {
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: Brand.green,
         foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(16))),
       ),
       progressIndicatorTheme: ProgressIndicatorThemeData(color: Brand.green),
       dividerTheme: DividerThemeData(
