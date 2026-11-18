@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -144,7 +146,13 @@ class _PillNavBar extends StatelessWidget {
     ];
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 0, 24, 28),
+      // Sit above the home indicator / gesture bar on phones that have one.
+      padding: EdgeInsets.fromLTRB(
+        24,
+        0,
+        24,
+        math.max(16.0, MediaQuery.of(context).padding.bottom),
+      ),
       child: Container(
         height: 72,
         decoration: BoxDecoration(
