@@ -235,8 +235,13 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
           const SizedBox(height: 12),
         ],
         if (phase != JobPhase.cancelled) ...[
-          _Progress(phase: phase),
-          const SizedBox(height: 14),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(8, 16, 8, 14),
+              child: _Progress(phase: phase),
+            ),
+          ),
+          const SizedBox(height: 12),
         ],
         // When and what
         Card(
@@ -250,28 +255,42 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
                     Expanded(
                       child: Text(
                         f.dayLong(job.start),
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
+                        style: TextStyle(
+                          color: hint,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                     JobStatusPill(job: job),
                   ],
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 Text(
                   f.timeRange(job.start, job.end),
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.4,
+                      ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  job.serviceName,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
                 ),
-                const SizedBox(height: 8),
-                Text(job.serviceName, style: const TextStyle(fontWeight: FontWeight.w600)),
                 if (job.extras.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    '+ ${job.extras.join(', ')}',
-                    style: TextStyle(color: hint),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      for (final extra in job.extras)
+                        StatusPill(
+                          label: extra,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                    ],
                   ),
                 ],
                 if (job.assignment?.isTeamLead == true) ...[
@@ -287,39 +306,64 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
         // Where and who
         Card(
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.place_outlined, size: 20),
+                    Icon(Icons.place_outlined, size: 20, color: hint),
                     const SizedBox(width: 8),
-                    Expanded(child: Text(job.address)),
+                    Expanded(
+                      child: Text(
+                        job.address,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          height: 1.3,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    const Icon(Icons.person_outline, size: 20),
+                    Icon(Icons.person_outline, size: 20, color: hint),
                     const SizedBox(width: 8),
                     Expanded(child: Text(job.customerName)),
                   ],
                 ),
-                const SizedBox(height: 14),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
+                const SizedBox(height: 8),
+                const Divider(),
+                Row(
                   children: [
-                    _smallAction(Icons.navigation_outlined, context.t('job.navigate'),
-                        () => _openMaps(job)),
+                    Expanded(
+                      child: _toolButton(
+                        context,
+                        Icons.navigation_outlined,
+                        context.t('job.navigate'),
+                        () => _openMaps(job),
+                      ),
+                    ),
                     if (job.customerPhone != null)
-                      _smallAction(Icons.call_outlined, context.t('job.call'),
-                          () => _call(job.customerPhone!)),
+                      Expanded(
+                        child: _toolButton(
+                          context,
+                          Icons.call_outlined,
+                          context.t('job.call'),
+                          () => _call(job.customerPhone!),
+                        ),
+                      ),
                     if (phase != JobPhase.cancelled)
-                      _smallAction(Icons.chat_bubble_outline, context.t('job.chat'),
-                          () => context.push('/job/${job.id}/chat')),
+                      Expanded(
+                        child: _toolButton(
+                          context,
+                          Icons.chat_bubble_outline,
+                          context.t('job.chat'),
+                          () => context.push('/job/${job.id}/chat'),
+                        ),
+                      ),
                   ],
                 ),
               ],
@@ -465,15 +509,43 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
     );
   }
 
-  Widget _smallAction(IconData icon, String label, VoidCallback onTap) {
-    return OutlinedButton.icon(
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size(0, 44),
-        padding: const EdgeInsets.symmetric(horizontal: 14),
+  Widget _toolButton(
+    BuildContext context,
+    IconData icon,
+    String label,
+    VoidCallback onTap,
+  ) {
+    final scheme = Theme.of(context).colorScheme;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Column(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: scheme.primary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(icon, size: 20, color: scheme.primary),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: scheme.primary,
+              ),
+            ),
+          ],
+        ),
       ),
-      onPressed: onTap,
-      icon: Icon(icon, size: 18),
-      label: Text(label),
     );
   }
 

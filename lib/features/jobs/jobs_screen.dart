@@ -185,17 +185,63 @@ class _TodayHeader extends StatelessWidget {
     final left = jobs
         .where((j) => j.phase != JobPhase.done && j.phase != JobPhase.cancelled)
         .length;
+    final done = jobs.length - left;
+    final finished = left == 0;
     final summary = jobs.length == 1
         ? context.t('jobs.summary.one')
         : context.t('jobs.summary.many', {'n': '${jobs.length}'});
+    final scheme = Theme.of(context).colorScheme;
+    final accent = finished ? scheme.secondary : scheme.primary;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: Text(
-        left == 0 ? context.t('jobs.allDone') : summary,
-        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w800,
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                finished
+                    ? Icons.check_circle_rounded
+                    : Icons.calendar_today_rounded,
+                size: 18,
+                color: accent,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  finished ? context.t('jobs.allDone') : summary,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: accent,
+                      ),
+                ),
+              ),
+              Text(
+                '$done/${jobs.length}',
+                style: TextStyle(
+                  color: accent,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: LinearProgressIndicator(
+              value: jobs.isEmpty ? 0 : done / jobs.length,
+              minHeight: 6,
+              backgroundColor: accent.withValues(alpha: 0.16),
+              color: accent,
             ),
+          ),
+        ],
       ),
     );
   }
@@ -240,120 +286,94 @@ class JobCard extends StatelessWidget {
 
     return Material(
       color: Theme.of(context).cardTheme.color,
-      borderRadius: BorderRadius.circular(20),
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(
+          color: borderColor,
+          width: (active || nextUp) ? 1.5 : 1,
+        ),
+      ),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: borderColor,
-              width: (active || nextUp) ? 1.5 : 1,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-                height: 6,
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(28),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (nextUp && !active) ...[
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 9,
-                          vertical: 5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: color.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
+              Container(width: 6, color: muted ? color.withValues(alpha: 0.4) : color),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (nextUp && !active) ...[
+                        Text(
                           context.t('jobs.nextUp').toUpperCase(),
                           style: TextStyle(
-                            fontSize: 10,
+                            fontSize: 11,
                             letterSpacing: 0.8,
                             fontWeight: FontWeight.w800,
                             color: color,
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 10),
-                    ],
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if (showDate)
+                        const SizedBox(height: 6),
+                      ],
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (showDate)
+                                  Text(
+                                    f.day(job.start),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: hint,
+                                    ),
+                                  ),
                                 Text(
-                                  f.day(job.start),
+                                  f.timeRange(job.start, job.end),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: hint,
-                                  ),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleLarge
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: -0.4,
+                                        color: muted ? hint : null,
+                                      ),
                                 ),
-                              Text(
-                                f.timeRange(job.start, job.end),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleLarge
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: -0.3,
-                                    ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        JobStatusPill(job: job),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      job.serviceName,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
-                    const SizedBox(height: 7),
-                    _line(Icons.place_outlined, job.address, hint, maxLines: 2),
-                    if (job.customerFirstName.isNotEmpty)
-                      _line(Icons.person_outline, job.customerName, hint),
-                    if (duration.isNotEmpty)
-                      _line(Icons.timer_outlined, duration, hint),
-                    const SizedBox(height: 8),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: Icon(
-                        Icons.arrow_forward_rounded,
-                        color: hint.withValues(alpha: muted ? 0.7 : 1),
-                        size: 18,
+                          const SizedBox(width: 8),
+                          JobStatusPill(job: job),
+                        ],
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 10),
+                      Text(
+                        job.serviceName,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+                      _line(Icons.place_outlined, job.address, hint, maxLines: 2),
+                      if (job.customerFirstName.isNotEmpty)
+                        _line(Icons.person_outline, job.customerName, hint),
+                      if (duration.isNotEmpty)
+                        _line(Icons.schedule_rounded, duration, hint),
+                    ],
+                  ),
                 ),
               ),
             ],

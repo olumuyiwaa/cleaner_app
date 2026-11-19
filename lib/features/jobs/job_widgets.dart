@@ -93,9 +93,17 @@ class _ChecklistSectionState extends ConsumerState<ChecklistSection> {
               ],
             ),
           ),
-          LinearProgressIndicator(
-            value: _items.isEmpty ? 0 : done / _items.length,
-            minHeight: 3,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: LinearProgressIndicator(
+                value: _items.isEmpty ? 0 : done / _items.length,
+                minHeight: 6,
+                backgroundColor:
+                    Theme.of(context).colorScheme.primary.withValues(alpha: 0.10),
+              ),
+            ),
           ),
           for (final item in _items)
             CheckboxListTile(

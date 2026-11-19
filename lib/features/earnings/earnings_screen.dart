@@ -107,6 +107,13 @@ class EarningsScreen extends ConsumerWidget {
     );
   }
 
+  Widget _emptyLine(BuildContext context, String text) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 4, 4, 8),
+      child: Text(text, style: TextStyle(color: Theme.of(context).hintColor)),
+    );
+  }
+
   Widget _body(BuildContext context, EarningsSummary s) {
     final f = context.fmt;
     final hint = Theme.of(context).hintColor;
@@ -203,11 +210,7 @@ class EarningsScreen extends ConsumerWidget {
         ),
         SectionTitle(context.t('earnings.recent')),
         if (s.earnings.isEmpty)
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text(context.t('earnings.emptyEarnings'),
-                style: TextStyle(color: hint)),
-          )
+          _emptyLine(context, context.t('earnings.emptyEarnings'))
         else
           Card(
             child: Column(
@@ -232,11 +235,7 @@ class EarningsScreen extends ConsumerWidget {
           ),
         SectionTitle(context.t('earnings.payouts')),
         if (s.payouts.isEmpty)
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text(context.t('earnings.emptyPayouts'),
-                style: TextStyle(color: hint)),
-          )
+          _emptyLine(context, context.t('earnings.emptyPayouts'))
         else
           Card(
             child: Column(

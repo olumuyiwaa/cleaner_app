@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/theme.dart';
 import '../../core/widgets.dart';
 import 'session_controller.dart';
 
@@ -12,15 +13,25 @@ class SplashScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(sessionProvider);
+    final failed = session.hasError;
     return Scaffold(
+      backgroundColor: failed ? null : Brand.navy,
       body: SafeArea(
-        child: session.hasError
+        child: failed
             ? ErrorView(
                 error: session.error!,
                 onRetry: () => ref.invalidate(sessionProvider),
               )
             : Center(
-                child: Image.asset('assets/images/logo_full.png', width: 220),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Image.asset('assets/images/logo_full.png', width: 200),
+                ),
               ),
       ),
     );

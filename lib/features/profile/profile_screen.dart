@@ -161,13 +161,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             child: Column(
               children: [
                 ListTile(
-                  leading: const Icon(Icons.mail_outline),
+                  leading: _iconWell(context, Icons.mail_outline),
                   title: Text(profile.email),
                 ),
                 ListTile(
-                  leading: const Icon(Icons.phone_outlined),
+                  leading: _iconWell(context, Icons.phone_outlined),
                   title: Text(profile.phone ?? context.t('profile.addPhone')),
-                  trailing: const Icon(Icons.edit_outlined, size: 18),
+                  trailing: Icon(Icons.edit_outlined,
+                      size: 18, color: Theme.of(context).hintColor),
                   onTap: () => _editPhone(profile),
                 ),
               ],
@@ -220,11 +221,25 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Widget _nav(BuildContext context, IconData icon, String key, String route) =>
-      ListTile(
-        leading: Icon(icon),
-        title: Text(context.t(key)),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () => context.push(route),
-      );
+  Widget _iconWell(BuildContext context, IconData icon) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: 36,
+      height: 36,
+      decoration: BoxDecoration(
+        color: scheme.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Icon(icon, size: 18, color: scheme.primary),
+    );
+  }
+
+  Widget _nav(BuildContext context, IconData icon, String key, String route) {
+    return ListTile(
+      leading: _iconWell(context, icon),
+      title: Text(context.t(key), style: const TextStyle(fontWeight: FontWeight.w600)),
+      trailing: Icon(Icons.chevron_right, color: Theme.of(context).hintColor),
+      onTap: () => context.push(route),
+    );
+  }
 }
