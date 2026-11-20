@@ -249,11 +249,22 @@ class EarningsScreen extends ConsumerWidget {
 }
 
 /// Rounded vertical bars for the latest earnings, oldest on the left. The
-/// biggest bar carries its amount in a dark bubble.
+/// biggest bar carries its amount in a dark bubble. Bars are rounded at the
+/// top and flat at the bottom, matching the UI guide.
 class _EarningBars extends StatelessWidget {
   const _EarningBars({required this.earnings});
 
   final List<EarningRow> earnings;
+
+  // Cycles through brand colours so each bar is visually distinct.
+  static const _barColors = [
+    Brand.navy,
+    Color(0xFFE87722), // orange
+    Brand.green,
+    Brand.blue,
+    Color(0xFF8E44AD), // purple
+    Color(0xFFD98200), // amber
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -262,6 +273,8 @@ class _EarningBars extends StatelessWidget {
     final maxCents =
         recent.fold<int>(1, (m, e) => e.amountCents > m ? e.amountCents : m);
     const chartHeight = 150.0;
+    const barWidth = 32.0;
+    const topRadius = Radius.circular(8);
 
     return Card(
       child: Padding(
@@ -269,17 +282,17 @@ class _EarningBars extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(context.t('earnings.recent'),
-                style:
-                    const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+            Text(
+              context.t('earnings.recent'),
+              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+            ),
             const SizedBox(height: 14),
             SizedBox(
-              // Reserve space: chartHeight for bars + 8px gap + ~16px date label
               height: chartHeight + 24,
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  for (final e in recent)
+                  for (var i = 0; i < recent.length; i++)
                     Expanded(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -289,36 +302,40 @@ class _EarningBars extends StatelessWidget {
                             alignment: Alignment.topCenter,
                             clipBehavior: Clip.none,
                             children: [
-                              // Bar
+                              // Bar — rounded top, flat bottom
                               Container(
-                                width: 28,
+                                width: barWidth,
                                 height: 24 +
                                     (chartHeight - 24) *
-                                        e.amountCents /
+                                        recent[i].amountCents /
                                         maxCents,
                                 decoration: BoxDecoration(
-                                  color: _earningColor(e.status),
-                                  borderRadius: BorderRadius.circular(14),
+                                  color: _barColors[i % _barColors.length],
+                                  borderRadius: const BorderRadius.only(
+                                    topLeft: topRadius,
+                                    topRight: topRadius,
+                                  ),
                                 ),
                               ),
-                              // Amount bubble — floats above the bar
-                              if (e.amountCents == maxCents)
+                              // Amount bubble floats above the tallest bar
+                              if (recent[i].amountCents == maxCents)
                                 Positioned(
-                                  top: -28,
+                                  top: -26,
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 7, vertical: 3),
                                     decoration: BoxDecoration(
                                       color: Brand.navyDark,
-                                      borderRadius: BorderRadius.circular(8),
+                                      borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: FittedBox(
                                       child: Text(
-                                        f.money(e.amountCents),
+                                        f.money(recent[i].amountCents),
                                         style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w700),
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w700,
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -327,11 +344,14 @@ class _EarningBars extends StatelessWidget {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            e.earnedAt == null ? '' : f.dayShort(e.earnedAt!),
+                            recent[i].earnedAt == null
+                                ? ''
+                                : f.dayShort(recent[i].earnedAt!),
                             maxLines: 1,
                             style: TextStyle(
-                                fontSize: 11,
-                                color: Theme.of(context).hintColor),
+                              fontSize: 11,
+                              color: Theme.of(context).hintColor,
+                            ),
                           ),
                         ],
                       ),
