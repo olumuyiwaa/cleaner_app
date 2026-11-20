@@ -137,7 +137,8 @@ class EarningsScreen extends ConsumerWidget {
               customBorder: const StadiumBorder(),
               onTap: () => context.push('/payouts'),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -155,7 +156,8 @@ class EarningsScreen extends ConsumerWidget {
           ),
         ),
         HeroCard(
-          chip: '${context.t('earnings.paid')} · ${f.money(s.lifetimePaidCents)}',
+          chip:
+              '${context.t('earnings.paid')} · ${f.money(s.lifetimePaidCents)}',
           label: context.t('earnings.pending'),
           value: f.money(s.pendingCents),
         ),
@@ -194,7 +196,8 @@ class EarningsScreen extends ConsumerWidget {
               subtitle: (p.periodStart != null && p.periodEnd != null)
                   ? '${f.date(p.periodStart!)} – ${f.date(p.periodEnd!)}'
                   : '',
-              trailing: Text(p.status, style: TextStyle(color: hint, fontSize: 12)),
+              trailing:
+                  Text(p.status, style: TextStyle(color: hint, fontSize: 12)),
             ),
             const SizedBox(height: 10),
           ],
@@ -262,56 +265,73 @@ class _EarningBars extends StatelessWidget {
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+        padding: const EdgeInsets.fromLTRB(16, 36, 16, 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(context.t('earnings.recent'),
-                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                style:
+                    const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
             const SizedBox(height: 14),
             SizedBox(
-              height: chartHeight + 34,
+              // Reserve space: chartHeight for bars + 8px gap + ~16px date label
+              height: chartHeight + 24,
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   for (final e in recent)
                     Expanded(
                       child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                          if (e.amountCents == maxCents)
-                            Container(
-                              margin: const EdgeInsets.only(bottom: 6),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Brand.navyDark,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: FittedBox(
-                                child: Text(
-                                  f.money(e.amountCents),
-                                  style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w700),
+                          Stack(
+                            alignment: Alignment.topCenter,
+                            clipBehavior: Clip.none,
+                            children: [
+                              // Bar
+                              Container(
+                                width: 28,
+                                height: 24 +
+                                    (chartHeight - 24) *
+                                        e.amountCents /
+                                        maxCents,
+                                decoration: BoxDecoration(
+                                  color: _earningColor(e.status),
+                                  borderRadius: BorderRadius.circular(14),
                                 ),
                               ),
-                            ),
-                          Container(
-                            width: 28,
-                            height: 24 + (chartHeight - 24) * e.amountCents / maxCents,
-                            decoration: BoxDecoration(
-                              color: _earningColor(e.status),
-                              borderRadius: BorderRadius.circular(14),
-                            ),
+                              // Amount bubble — floats above the bar
+                              if (e.amountCents == maxCents)
+                                Positioned(
+                                  top: -28,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 7, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: Brand.navyDark,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: FittedBox(
+                                      child: Text(
+                                        f.money(e.amountCents),
+                                        style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w700),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 6),
                           Text(
                             e.earnedAt == null ? '' : f.dayShort(e.earnedAt!),
                             maxLines: 1,
                             style: TextStyle(
-                                fontSize: 11, color: Theme.of(context).hintColor),
+                                fontSize: 11,
+                                color: Theme.of(context).hintColor),
                           ),
                         ],
                       ),
