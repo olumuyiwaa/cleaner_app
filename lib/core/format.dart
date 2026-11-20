@@ -16,6 +16,15 @@ class Fmt {
   /// Monday 3 November
   String dayLong(DateTime d) => DateFormat('EEEE d MMMM', lang).format(d);
 
+  /// November 2026
+  String monthYear(DateTime d) => DateFormat('LLLL y', lang).format(d);
+
+  /// Two-letter weekday, e.g. Mo / ma
+  String weekdayShort(DateTime d) {
+    final t = DateFormat.E(lang).format(d);
+    return t.length <= 2 ? t : t.substring(0, 2);
+  }
+
   /// 3 Nov
   String dayShort(DateTime d) => DateFormat('d MMM', lang).format(d);
 

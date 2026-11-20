@@ -43,6 +43,12 @@ const _en = <String, String>{
   'nav.jobs': 'Jobs',
   'nav.earnings': 'Earnings',
   'nav.profile': 'Profile',
+  'nav.calendar': 'Calendar',
+  'calendar.title': 'Calendar',
+  'calendar.today': 'Today',
+  'calendar.empty': 'No jobs on this day',
+  'calendar.prev': 'Previous month',
+  'calendar.next': 'Next month',
 
   // Login
   'login.title': 'Welcome back',
@@ -255,6 +261,12 @@ const _nl = <String, String>{
   'nav.jobs': 'Klussen',
   'nav.earnings': 'Verdiensten',
   'nav.profile': 'Profiel',
+  'nav.calendar': 'Agenda',
+  'calendar.title': 'Agenda',
+  'calendar.today': 'Vandaag',
+  'calendar.empty': 'Geen klussen op deze dag',
+  'calendar.prev': 'Vorige maand',
+  'calendar.next': 'Volgende maand',
 
   'login.title': 'Welkom terug',
   'login.subtitle': 'Log in om je klussen te zien',

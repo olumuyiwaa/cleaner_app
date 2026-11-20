@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../features/auth/login_screen.dart';
 import '../features/auth/session_controller.dart';
 import '../features/auth/splash_screen.dart';
+import '../features/calendar/calendar_screen.dart';
 import '../features/earnings/earnings_screen.dart';
 import '../features/jobs/job_chat_screen.dart';
 import '../features/jobs/job_detail_screen.dart';
@@ -54,6 +55,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         branches: [
           StatefulShellBranch(routes: [
             GoRoute(path: '/jobs', builder: (_, __) => const JobsScreen()),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(path: '/calendar', builder: (_, __) => const CalendarScreen()),
           ]),
           StatefulShellBranch(routes: [
             GoRoute(
@@ -134,6 +138,11 @@ class _PillNavBar extends StatelessWidget {
     final items = [
       (Icons.work_outline_rounded, Icons.work_rounded, context.t('nav.jobs')),
       (
+        Icons.calendar_month_outlined,
+        Icons.calendar_month_rounded,
+        context.t('nav.calendar'),
+      ),
+      (
         Icons.payments_outlined,
         Icons.payments_rounded,
         context.t('nav.earnings'),
@@ -148,9 +157,9 @@ class _PillNavBar extends StatelessWidget {
     return Padding(
       // Sit above the home indicator / gesture bar on phones that have one.
       padding: EdgeInsets.fromLTRB(
-        40,
+        28,
         0,
-        40,
+        28,
         math.max(16.0, MediaQuery.of(context).padding.bottom),
       ),
       child: Container(
