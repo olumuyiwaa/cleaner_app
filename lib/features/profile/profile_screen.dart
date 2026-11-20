@@ -97,131 +97,131 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       body: SafeArea(
         bottom: false,
         child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
-        children: [
-          ScreenHeader(title: context.t('nav.profile')),
-          // Dark hero identity card matching mockup style
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 26, horizontal: 18),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(28),
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Brand.navy, Brand.navyDark],
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+          children: [
+            ScreenHeader(title: context.t('nav.profile')),
+            // Dark hero identity card matching mockup style
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 26, horizontal: 18),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Brand.navy, Brand.navyDark],
+                ),
               ),
-            ),
-            child: Column(
-              children: [
-                GestureDetector(
-                  onTap: _uploading ? null : _changeAvatar,
-                  child: Stack(
-                    alignment: Alignment.bottomRight,
-                    children: [
-                      CircleAvatar(
-                        radius: 46,
-                        backgroundColor: Colors.white24,
-                        foregroundColor: Colors.white,
-                        backgroundImage: profile.avatarUrl != null
-                            ? NetworkImage(profile.avatarUrl!)
-                            : null,
-                        child: profile.avatarUrl == null
-                            ? Text(profile.initials,
-                                style: const TextStyle(fontSize: 26))
-                            : null,
-                      ),
-                      CircleAvatar(
-                        radius: 15,
-                        backgroundColor: Brand.blue,
-                        child: _uploading
-                            ? const SizedBox(
-                                width: 14,
-                                height: 14,
-                                child: CircularProgressIndicator(
-                                    strokeWidth: 2, color: Colors.white),
-                              )
-                            : const Icon(Icons.edit,
-                                size: 14, color: Colors.white),
-                      ),
-                    ],
+              child: Column(
+                children: [
+                  GestureDetector(
+                    onTap: _uploading ? null : _changeAvatar,
+                    child: Stack(
+                      alignment: Alignment.bottomRight,
+                      children: [
+                        CircleAvatar(
+                          radius: 46,
+                          backgroundColor: Colors.white24,
+                          foregroundColor: Colors.white,
+                          backgroundImage: profile.avatarUrl != null
+                              ? NetworkImage(profile.avatarUrl!)
+                              : null,
+                          child: profile.avatarUrl == null
+                              ? Text(profile.initials,
+                                  style: const TextStyle(fontSize: 26))
+                              : null,
+                        ),
+                        CircleAvatar(
+                          radius: 15,
+                          backgroundColor: Brand.blue,
+                          child: _uploading
+                              ? const SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2, color: Colors.white),
+                                )
+                              : const Icon(Icons.edit,
+                                  size: 14, color: Colors.white),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  profile.fullName,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                      ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  profile.businessName,
-                  style: const TextStyle(color: Colors.white60, fontSize: 14),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          Card(
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.mail_outline),
-                  title: Text(profile.email),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.phone_outlined),
-                  title: Text(profile.phone ?? context.t('profile.addPhone')),
-                  trailing: const Icon(Icons.edit_outlined, size: 18),
-                  onTap: () => _editPhone(profile),
-                ),
-              ],
-            ),
-          ),
-          SectionHeading(context.t('profile.work')),
-          Card(
-            child: Column(
-              children: [
-                _nav(context, Icons.schedule, 'profile.availability',
-                    '/availability'),
-                _nav(context, Icons.beach_access_outlined, 'profile.leave',
-                    '/leave'),
-                _nav(context, Icons.folder_outlined, 'profile.documents',
-                    '/documents'),
-                _nav(context, Icons.account_balance_outlined, 'profile.payouts',
-                    '/payouts'),
-                _nav(context, Icons.security_outlined, 'profile.security',
-                    '/security'),
-              ],
-            ),
-          ),
-          SectionHeading(context.t('profile.language')),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: SegmentedButton<String>(
-                segments: const [
-                  ButtonSegment(value: 'en', label: Text('English')),
-                  ButtonSegment(value: 'nl', label: Text('Nederlands')),
+                  const SizedBox(height: 14),
+                  Text(
+                    profile.fullName,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    profile.businessName,
+                    style: const TextStyle(color: Colors.white60, fontSize: 14),
+                  ),
                 ],
-                selected: {lang},
-                onSelectionChanged: (s) =>
-                    ref.read(localeProvider.notifier).set(s.first),
               ),
             ),
-          ),
-          const SizedBox(height: 24),
-          OutlinedButton.icon(
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.error,
+            const SizedBox(height: 16),
+            Card(
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.mail_outline),
+                    title: Text(profile.email),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.phone_outlined),
+                    title: Text(profile.phone ?? context.t('profile.addPhone')),
+                    trailing: const Icon(Icons.edit_outlined, size: 18),
+                    onTap: () => _editPhone(profile),
+                  ),
+                ],
+              ),
             ),
-            onPressed: _signOut,
-            icon: const Icon(Icons.logout),
-            label: Text(context.t('profile.signOut')),
-          ),
-          const SizedBox(height: 20),
-        ],
+            SectionHeading(context.t('profile.work')),
+            Card(
+              child: Column(
+                children: [
+                  _nav(context, Icons.schedule, 'profile.availability',
+                      '/availability'),
+                  _nav(context, Icons.beach_access_outlined, 'profile.leave',
+                      '/leave'),
+                  _nav(context, Icons.folder_outlined, 'profile.documents',
+                      '/documents'),
+                  _nav(context, Icons.account_balance_outlined,
+                      'profile.payouts', '/payouts'),
+                  _nav(context, Icons.security_outlined, 'profile.security',
+                      '/security'),
+                ],
+              ),
+            ),
+            SectionHeading(context.t('profile.language')),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(value: 'en', label: Text('English')),
+                    ButtonSegment(value: 'nl', label: Text('Nederlands')),
+                  ],
+                  selected: {lang},
+                  onSelectionChanged: (s) =>
+                      ref.read(localeProvider.notifier).set(s.first),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.error,
+              ),
+              onPressed: _signOut,
+              icon: const Icon(Icons.logout),
+              label: Text(context.t('profile.signOut')),
+            ),
+            const SizedBox(height: 20),
+          ],
         ),
       ),
     );

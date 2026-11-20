@@ -157,7 +157,7 @@ class _PillNavBar extends StatelessWidget {
         height: 68,
         decoration: BoxDecoration(
           color: Brand.pillNav,
-          borderRadius: BorderRadius.circular(40),
+          borderRadius: BorderRadius.circular(28),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.28),
@@ -179,7 +179,7 @@ class _PillNavBar extends StatelessWidget {
                 label: label,
                 child: ExcludeSemantics(
                   child: InkWell(
-                    borderRadius: BorderRadius.circular(28),
+                    borderRadius: BorderRadius.circular(20),
                     onTap: () => shell.goBranch(
                       i,
                       initialLocation: i == shell.currentIndex,

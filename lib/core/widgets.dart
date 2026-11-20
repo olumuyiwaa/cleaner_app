@@ -55,7 +55,8 @@ class _IconBadge extends StatelessWidget {
         shape: BoxShape.circle,
         color: scheme.primary.withValues(alpha: 0.08),
       ),
-      child: Icon(icon, size: 38, color: scheme.primary.withValues(alpha: 0.75)),
+      child:
+          Icon(icon, size: 38, color: scheme.primary.withValues(alpha: 0.75)),
     );
   }
 }
@@ -75,7 +76,8 @@ class ErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _IconBadge(offline ? Icons.wifi_off_rounded : Icons.error_outline_rounded),
+            _IconBadge(
+                offline ? Icons.wifi_off_rounded : Icons.error_outline_rounded),
             const SizedBox(height: 20),
             Text(
               errorText(context, error),
@@ -97,7 +99,8 @@ class ErrorView extends StatelessWidget {
 }
 
 class EmptyView extends StatelessWidget {
-  const EmptyView({super.key, required this.icon, required this.title, this.message});
+  const EmptyView(
+      {super.key, required this.icon, required this.title, this.message});
 
   final IconData icon;
   final String title;
@@ -179,7 +182,7 @@ class StatusPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
         label,
@@ -214,7 +217,8 @@ Future<bool> confirm(
         FilledButton(
           style: FilledButton.styleFrom(
             minimumSize: const Size(100, 44),
-            backgroundColor: destructive ? Theme.of(ctx).colorScheme.error : null,
+            backgroundColor:
+                destructive ? Theme.of(ctx).colorScheme.error : null,
           ),
           onPressed: () => Navigator.pop(ctx, true),
           child: Text(confirmLabel),
@@ -243,7 +247,8 @@ class Skeleton extends StatefulWidget {
   State<Skeleton> createState() => _SkeletonState();
 }
 
-class _SkeletonState extends State<Skeleton> with SingleTickerProviderStateMixin {
+class _SkeletonState extends State<Skeleton>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _c = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 1100),
@@ -312,7 +317,6 @@ class SkeletonList extends StatelessWidget {
   }
 }
 
-
 // ---------------------------------------------------------------------------
 // Layout kit: large page header, navy hero card, inset cards with a progress
 // panel, round buttons. Colours all come from the theme / Brand.
@@ -327,7 +331,8 @@ Color panelColor(BuildContext context) =>
 /// Large page title with optional subtitle and a trailing widget, in place of
 /// an app bar. Sits under the status bar.
 class ScreenHeader extends StatelessWidget {
-  const ScreenHeader({super.key, required this.title, this.subtitle, this.trailing});
+  const ScreenHeader(
+      {super.key, required this.title, this.subtitle, this.trailing});
 
   final String title;
   final String? subtitle;
@@ -402,7 +407,8 @@ class RoundIconButton extends StatelessWidget {
             child: SizedBox(
               width: size,
               height: size,
-              child: Icon(icon, size: size * 0.5, color: theme.colorScheme.onSurface),
+              child: Icon(icon,
+                  size: size * 0.5, color: theme.colorScheme.onSurface),
             ),
           ),
         ),
@@ -436,7 +442,7 @@ class HeroCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(16),
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -456,7 +462,7 @@ class HeroCard extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -486,7 +492,8 @@ class HeroCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          Text(label, style: const TextStyle(color: Colors.white70, fontSize: 14)),
+          Text(label,
+              style: const TextStyle(color: Colors.white70, fontSize: 14)),
           const SizedBox(height: 2),
           FittedBox(
             fit: BoxFit.scaleDown,
@@ -663,7 +670,7 @@ class InsetCard extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
                 decoration: BoxDecoration(
                   color: panelColor(context),
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: child,
               ),
@@ -677,7 +684,8 @@ class InsetCard extends StatelessWidget {
 
 /// A rounded square holding an icon in a colour, e.g. the service or phase.
 class IconTile extends StatelessWidget {
-  const IconTile({super.key, required this.icon, required this.color, this.size = 44});
+  const IconTile(
+      {super.key, required this.icon, required this.color, this.size = 44});
 
   final IconData icon;
   final Color color;
@@ -727,7 +735,8 @@ class ProgressBlock extends StatelessWidget {
                 leftTop,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                style:
+                    const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
               ),
             ),
             if (rightTop != null)
@@ -752,12 +761,14 @@ class ProgressBlock extends StatelessWidget {
                 leftBottom,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                style:
+                    const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
               ),
             ),
             if (rightBottom != null)
               Text(rightBottom!,
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                  style: const TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.w600)),
           ],
         ),
       ],
@@ -785,7 +796,7 @@ class PillTabs extends StatelessWidget {
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: theme.cardTheme.color,
-        borderRadius: BorderRadius.circular(30),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         children: [
@@ -795,7 +806,7 @@ class PillTabs extends StatelessWidget {
                 button: true,
                 selected: i == selected,
                 child: InkWell(
-                  borderRadius: BorderRadius.circular(26),
+                  borderRadius: BorderRadius.circular(10),
                   onTap: () => onChanged(i),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 180),
@@ -803,7 +814,7 @@ class PillTabs extends StatelessWidget {
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       color: i == selected ? Brand.navy : Colors.transparent,
-                      borderRadius: BorderRadius.circular(26),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
                       labels[i],

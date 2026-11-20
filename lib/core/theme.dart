@@ -50,7 +50,8 @@ class AppTheme {
         displayColor: isLight ? Brand.navyDark : Colors.white,
       ),
       appBarTheme: AppBarTheme(
-        backgroundColor: isLight ? const Color(0xFFF2F2F7) : const Color(0xFF0E1420),
+        backgroundColor:
+            isLight ? const Color(0xFFF2F2F7) : const Color(0xFF0E1420),
         foregroundColor: isLight ? Brand.navyDark : Colors.white,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
@@ -71,7 +72,7 @@ class AppTheme {
         shadowColor: Brand.navy.withValues(alpha: 0.08),
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(26),
+          borderRadius: BorderRadius.circular(16),
           side: BorderSide(
             color: isLight ? const Color(0xFFEBEEF5) : const Color(0xFF263149),
           ),
@@ -134,20 +135,19 @@ class AppTheme {
       dialogTheme: DialogThemeData(
         backgroundColor: isLight ? Colors.white : const Color(0xFF172033),
         shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(22))),
+            borderRadius: BorderRadius.all(Radius.circular(14))),
       ),
       bottomSheetTheme: BottomSheetThemeData(
         showDragHandle: true,
         backgroundColor: isLight ? Colors.white : const Color(0xFF172033),
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: Brand.green,
         foregroundColor: Colors.white,
         shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(16))),
+            borderRadius: BorderRadius.all(Radius.circular(12))),
       ),
       progressIndicatorTheme: ProgressIndicatorThemeData(color: Brand.green),
       dividerTheme: DividerThemeData(
@@ -160,7 +160,7 @@ class AppTheme {
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
