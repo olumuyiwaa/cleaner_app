@@ -315,6 +315,16 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
             ),
           ),
         ),
+        if (phase != JobPhase.cancelled) ...[
+          const SizedBox(height: 12),
+          // Milestones: planned, on the way, working, done
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(8, 16, 8, 14),
+              child: _Progress(phase: phase),
+            ),
+          ),
+        ],
         const SizedBox(height: 12),
 
         // Where and who
@@ -665,6 +675,89 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Four dots showing where the job is: planned, on the way, working, done.
+class _Progress extends StatelessWidget {
+  const _Progress({required this.phase});
+
+  final JobPhase phase;
+
+  @override
+  Widget build(BuildContext context) {
+    final steps = [
+      (JobPhase.upcoming, context.t('job.step.planned')),
+      (JobPhase.onTheWay, context.t('job.step.onTheWay')),
+      (JobPhase.working, context.t('job.step.working')),
+      (JobPhase.done, context.t('job.step.done')),
+    ];
+    final current = steps.indexWhere((s) => s.$1 == phase);
+    final color = phaseColor(phase);
+    final hint = Theme.of(context).hintColor;
+
+    return Row(
+      children: [
+        for (var i = 0; i < steps.length; i++) ...[
+          Expanded(
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: i == 0
+                          ? const SizedBox()
+                          : Container(
+                              height: 3,
+                              color: i <= current
+                                  ? color
+                                  : hint.withValues(alpha: 0.25)),
+                    ),
+                    Container(
+                      width: 22,
+                      height: 22,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: i <= current ? color : Colors.transparent,
+                        border: Border.all(
+                          color: i <= current
+                              ? color
+                              : hint.withValues(alpha: 0.4),
+                          width: 2,
+                        ),
+                      ),
+                      child: i < current || phase == JobPhase.done
+                          ? const Icon(Icons.check,
+                              size: 14, color: Colors.white)
+                          : null,
+                    ),
+                    Expanded(
+                      child: i == steps.length - 1
+                          ? const SizedBox()
+                          : Container(
+                              height: 3,
+                              color: i < current
+                                  ? color
+                                  : hint.withValues(alpha: 0.25)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  steps[i].$2,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight:
+                        i == current ? FontWeight.w800 : FontWeight.w500,
+                    color: i == current ? color : hint,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
