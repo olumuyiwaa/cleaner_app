@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Colours taken from the Tod Cleaning Services logo.
+/// Colours taken from the TODCleaners logo.
 class Brand {
   Brand._();
 

@@ -45,7 +45,7 @@ class LiveLocation extends Notifier<String?> {
         distanceFilter: 30,
         intervalDuration: AppConfig.locationPingInterval,
         foregroundNotificationConfig: const ForegroundNotificationConfig(
-          notificationTitle: 'Tod Cleaning',
+          notificationTitle: 'TODCleaners',
           notificationText: 'Sharing your location while you work',
           enableWakeLock: true,
         ),
@@ -60,13 +60,15 @@ class LiveLocation extends Notifier<String?> {
         allowBackgroundLocationUpdates: true,
       );
     } else {
-      settings = const LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 30);
+      settings = const LocationSettings(
+          accuracy: LocationAccuracy.high, distanceFilter: 30);
     }
 
     _sub = Geolocator.getPositionStream(locationSettings: settings).listen(
       (p) {
         // At most one ping per interval, however often the phone reports.
-        if (DateTime.now().difference(_lastSent) >= AppConfig.locationPingInterval) {
+        if (DateTime.now().difference(_lastSent) >=
+            AppConfig.locationPingInterval) {
           _send((lat: p.latitude, lng: p.longitude));
         }
       },
@@ -110,4 +112,5 @@ class LiveLocation extends Notifier<String?> {
   }
 }
 
-final liveLocationProvider = NotifierProvider<LiveLocation, String?>(LiveLocation.new);
+final liveLocationProvider =
+    NotifierProvider<LiveLocation, String?>(LiveLocation.new);

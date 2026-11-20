@@ -1,5 +1,5 @@
 name: cleaner_app
-description: Tod Cleaning Services - cleaner app (jobs, check-in, checklists, photos, earnings, leave).
+description: TODCleaners - cleaner app (jobs, check-in, checklists, photos, earnings, leave).
 publish_to: "none"
 version: 1.0.0+1
 
