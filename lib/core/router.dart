@@ -148,13 +148,13 @@ class _PillNavBar extends StatelessWidget {
     return Padding(
       // Sit above the home indicator / gesture bar on phones that have one.
       padding: EdgeInsets.fromLTRB(
-        24,
+        40,
         0,
-        24,
+        40,
         math.max(16.0, MediaQuery.of(context).padding.bottom),
       ),
       child: Container(
-        height: 72,
+        height: 68,
         decoration: BoxDecoration(
           color: Brand.pillNav,
           borderRadius: BorderRadius.circular(40),
@@ -184,48 +184,23 @@ class _PillNavBar extends StatelessWidget {
                       i,
                       initialLocation: i == shell.currentIndex,
                     ),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      curve: Curves.easeInOut,
-                      height: 52,
-                      margin: const EdgeInsets.symmetric(
-                        horizontal: 5,
-                        vertical: 10,
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      decoration: BoxDecoration(
-                        color: selected
-                            ? Colors.white.withValues(alpha: 0.16)
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(28),
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            selected ? item.$2 : item.$1,
-                            size: 21,
-                            color: selected
-                                ? Colors.white
-                                : Colors.white.withValues(alpha: 0.62),
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            label,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: selected
-                                  ? Colors.white
-                                  : Colors.white.withValues(alpha: 0.62),
-                              fontSize: 10,
-                              height: 1.1,
-                              fontWeight:
-                                  selected ? FontWeight.w700 : FontWeight.w500,
-                            ),
-                          ),
-                        ],
+                    child: Center(
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        curve: Curves.easeInOut,
+                        width: 52,
+                        height: 52,
+                        decoration: BoxDecoration(
+                          color: selected ? Colors.white : Colors.transparent,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          selected ? item.$2 : item.$1,
+                          size: 24,
+                          color: selected
+                              ? Brand.navy
+                              : Colors.white.withValues(alpha: 0.7),
+                        ),
                       ),
                     ),
                   ),

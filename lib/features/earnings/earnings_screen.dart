@@ -83,6 +83,10 @@ final earningsProvider =
       mapOf(await api.get('/cleaners/me/earnings')));
 });
 
+Color _earningColor(String status) => status == 'PAID'
+    ? Brand.green
+    : (status == 'IN_PAYOUT' ? Brand.blue : const Color(0xFFD98200));
+
 class EarningsScreen extends ConsumerWidget {
   const EarningsScreen({super.key});
 
@@ -91,17 +95,19 @@ class EarningsScreen extends ConsumerWidget {
     final data = ref.watch(earningsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: Text(context.t('earnings.title'))),
-      body: data.when(
-        loading: () => const SkeletonList(),
-        error: (e, _) => ErrorView(
-            error: e, onRetry: () => ref.invalidate(earningsProvider)),
-        data: (s) => RefreshIndicator(
-          onRefresh: () async {
-            ref.invalidate(earningsProvider);
-            await ref.read(earningsProvider.future);
-          },
-          child: _body(context, s),
+      body: SafeArea(
+        bottom: false,
+        child: data.when(
+          loading: () => const LoadingView(),
+          error: (e, _) => ErrorView(
+              error: e, onRetry: () => ref.invalidate(earningsProvider)),
+          data: (s) => RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(earningsProvider);
+              await ref.read(earningsProvider.future);
+            },
+            child: _body(context, s),
+          ),
         ),
       ),
     );
@@ -120,142 +126,115 @@ class EarningsScreen extends ConsumerWidget {
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 112),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
       children: [
-        // Dark hero card — matches the mockup's balance card style
-        Container(
-          padding: const EdgeInsets.all(22),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            color: Brand.pillNav,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(Icons.account_balance_wallet_rounded,
-                        color: Colors.white, size: 20),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    context.t('earnings.pending'),
-                    style: const TextStyle(color: Colors.white70, fontSize: 14),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Text(
-                f.money(s.pendingCents),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 36,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.5,
-                ),
-              ),
-              const SizedBox(height: 18),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(14),
-                ),
+        ScreenHeader(
+          title: context.t('earnings.title'),
+          trailing: Material(
+            color: Theme.of(context).cardTheme.color,
+            shape: const StadiumBorder(),
+            child: InkWell(
+              customBorder: const StadiumBorder(),
+              onTap: () => context.push('/payouts'),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Container(
-                      width: 28,
-                      height: 28,
-                      decoration: BoxDecoration(
-                        color: Brand.green.withValues(alpha: 0.25),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.check_rounded,
-                          size: 16, color: Color(0xFF9BE15D)),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        context.t('earnings.paid'),
-                        style: const TextStyle(
-                            color: Colors.white70, fontSize: 13),
-                      ),
-                    ),
+                    const Icon(Icons.account_balance_outlined, size: 18),
+                    const SizedBox(width: 8),
                     Text(
-                      f.money(s.lifetimePaidCents),
+                      context.t('earnings.payoutSetup'),
                       style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15),
+                          fontWeight: FontWeight.w700, fontSize: 14),
                     ),
                   ],
                 ),
               ),
-            ],
+            ),
           ),
         ),
-        const SizedBox(height: 14),
-        OutlinedButton.icon(
-          onPressed: () => context.push('/payouts'),
-          icon: const Icon(Icons.account_balance_outlined),
-          label: Text(context.t('earnings.payoutSetup')),
+        HeroCard(
+          chip: '${context.t('earnings.paid')} · ${f.money(s.lifetimePaidCents)}',
+          label: context.t('earnings.pending'),
+          value: f.money(s.pendingCents),
         ),
-        SectionTitle(context.t('earnings.recent')),
+        if (s.earnings.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          _EarningBars(earnings: s.earnings),
+        ],
+        SectionHeading(context.t('earnings.recent')),
         if (s.earnings.isEmpty)
           _emptyLine(context, context.t('earnings.emptyEarnings'))
         else
-          Card(
-            child: Column(
-              children: [
-                for (final e in s.earnings)
-                  ListTile(
-                    title: Text(f.money(e.amountCents),
-                        style: const TextStyle(fontWeight: FontWeight.w700)),
-                    subtitle:
-                        Text(e.earnedAt == null ? '' : f.date(e.earnedAt!)),
-                    trailing: StatusPill(
-                      label: _earningLabel(context, e.status),
-                      color: e.status == 'PAID'
-                          ? Brand.green
-                          : (e.status == 'IN_PAYOUT'
-                              ? Brand.blue
-                              : const Color(0xFFD98200)),
-                    ),
-                  ),
-              ],
+          for (final e in s.earnings) ...[
+            _row(
+              context,
+              icon: Icons.payments_outlined,
+              color: _earningColor(e.status),
+              title: f.money(e.amountCents),
+              subtitle: e.earnedAt == null ? '' : f.date(e.earnedAt!),
+              trailing: StatusPill(
+                label: _earningLabel(context, e.status),
+                color: _earningColor(e.status),
+              ),
             ),
-          ),
-        SectionTitle(context.t('earnings.payouts')),
+            const SizedBox(height: 10),
+          ],
+        SectionHeading(context.t('earnings.payouts')),
         if (s.payouts.isEmpty)
           _emptyLine(context, context.t('earnings.emptyPayouts'))
         else
-          Card(
-            child: Column(
-              children: [
-                for (final p in s.payouts)
-                  ListTile(
-                    title: Text(f.money(p.totalCents),
-                        style: const TextStyle(fontWeight: FontWeight.w700)),
-                    subtitle: Text(
-                      (p.periodStart != null && p.periodEnd != null)
-                          ? '${f.date(p.periodStart!)} – ${f.date(p.periodEnd!)}'
-                          : '',
-                    ),
-                    trailing: Text(p.status,
-                        style: TextStyle(color: hint, fontSize: 12)),
-                  ),
-              ],
+          for (final p in s.payouts) ...[
+            _row(
+              context,
+              icon: Icons.account_balance_outlined,
+              color: Brand.blue,
+              title: f.money(p.totalCents),
+              subtitle: (p.periodStart != null && p.periodEnd != null)
+                  ? '${f.date(p.periodStart!)} – ${f.date(p.periodEnd!)}'
+                  : '',
+              trailing: Text(p.status, style: TextStyle(color: hint, fontSize: 12)),
             ),
-          ),
+            const SizedBox(height: 10),
+          ],
       ],
+    );
+  }
+
+  Widget _row(
+    BuildContext context, {
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String subtitle,
+    required Widget trailing,
+  }) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            IconTile(icon: icon, color: color),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w700, fontSize: 16)),
+                  if (subtitle.isNotEmpty)
+                    Text(subtitle,
+                        style: TextStyle(
+                            color: Theme.of(context).hintColor, fontSize: 13)),
+                ],
+              ),
+            ),
+            trailing,
+          ],
+        ),
+      ),
     );
   }
 
@@ -264,4 +243,85 @@ class EarningsScreen extends ConsumerWidget {
         'IN_PAYOUT' => context.t('earnings.status.inPayout'),
         _ => context.t('earnings.status.pending'),
       };
+}
+
+/// Rounded vertical bars for the latest earnings, oldest on the left. The
+/// biggest bar carries its amount in a dark bubble.
+class _EarningBars extends StatelessWidget {
+  const _EarningBars({required this.earnings});
+
+  final List<EarningRow> earnings;
+
+  @override
+  Widget build(BuildContext context) {
+    final f = context.fmt;
+    final recent = earnings.take(6).toList().reversed.toList();
+    final maxCents =
+        recent.fold<int>(1, (m, e) => e.amountCents > m ? e.amountCents : m);
+    const chartHeight = 150.0;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(context.t('earnings.recent'),
+                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+            const SizedBox(height: 14),
+            SizedBox(
+              height: chartHeight + 34,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  for (final e in recent)
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          if (e.amountCents == maxCents)
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 6),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Brand.navyDark,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: FittedBox(
+                                child: Text(
+                                  f.money(e.amountCents),
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700),
+                                ),
+                              ),
+                            ),
+                          Container(
+                            width: 28,
+                            height: 24 + (chartHeight - 24) * e.amountCents / maxCents,
+                            decoration: BoxDecoration(
+                              color: _earningColor(e.status),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            e.earnedAt == null ? '' : f.dayShort(e.earnedAt!),
+                            maxLines: 1,
+                            style: TextStyle(
+                                fontSize: 11, color: Theme.of(context).hintColor),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

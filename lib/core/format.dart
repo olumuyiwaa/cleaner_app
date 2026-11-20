@@ -16,6 +16,9 @@ class Fmt {
   /// Monday 3 November
   String dayLong(DateTime d) => DateFormat('EEEE d MMMM', lang).format(d);
 
+  /// 3 Nov
+  String dayShort(DateTime d) => DateFormat('d MMM', lang).format(d);
+
   /// 09:00
   String time(DateTime d) => DateFormat.Hm(lang).format(d);
 

@@ -50,28 +50,28 @@ class AppTheme {
         displayColor: isLight ? Brand.navyDark : Colors.white,
       ),
       appBarTheme: AppBarTheme(
-        backgroundColor: isLight ? Colors.white : const Color(0xFF151C2B),
+        backgroundColor: isLight ? const Color(0xFFF2F2F7) : const Color(0xFF0E1420),
         foregroundColor: isLight ? Brand.navyDark : Colors.white,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
-        centerTitle: false,
-        toolbarHeight: 68,
+        centerTitle: true,
+        toolbarHeight: 60,
         titleTextStyle: TextStyle(
           color: isLight ? Brand.navyDark : Colors.white,
-          fontSize: 20,
+          fontSize: 17,
           fontWeight: FontWeight.w700,
-          letterSpacing: -0.3,
+          letterSpacing: -0.2,
         ),
       ),
       cardTheme: CardThemeData(
-        elevation: isLight ? 1 : 0,
+        elevation: 0,
         margin: EdgeInsets.zero,
         color: isLight ? Colors.white : const Color(0xFF172033),
         shadowColor: Brand.navy.withValues(alpha: 0.08),
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(22),
+          borderRadius: BorderRadius.circular(26),
           side: BorderSide(
             color: isLight ? const Color(0xFFEBEEF5) : const Color(0xFF263149),
           ),
@@ -80,16 +80,14 @@ class AppTheme {
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           minimumSize: const Size.fromHeight(54),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: const StadiumBorder(),
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           minimumSize: const Size.fromHeight(54),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: const StadiumBorder(),
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
       ),

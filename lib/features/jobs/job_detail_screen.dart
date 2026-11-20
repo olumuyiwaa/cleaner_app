@@ -199,7 +199,20 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
     final waiting = queue.where((a) => a.jobId == widget.jobId).length;
 
     return Scaffold(
-      appBar: AppBar(title: Text(context.t('job.title'))),
+      appBar: AppBar(
+        leadingWidth: 64,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 16),
+          child: Center(
+            child: RoundIconButton(
+              icon: Icons.arrow_back_ios_new_rounded,
+              semanticLabel: MaterialLocalizations.of(context).backButtonTooltip,
+              onTap: () => context.pop(),
+            ),
+          ),
+        ),
+        title: Text(context.t('job.title')),
+      ),
       body: job.when(
         loading: () => const LoadingView(),
         error: (e, _) => ErrorView(
@@ -250,71 +263,55 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
               const Color(0xFFD98200)),
           const SizedBox(height: 12),
         ],
-        if (phase != JobPhase.cancelled) ...[
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(8, 16, 8, 14),
-              child: _Progress(phase: phase),
-            ),
+        // Header: status icon, service, day, extras
+        Row(
+          children: [
+            IconTile(icon: phaseIcon(phase), color: phaseColor(phase), size: 56),
+            const Spacer(),
+            JobStatusPill(job: job),
+          ],
+        ),
+        const SizedBox(height: 14),
+        Text(
+          job.serviceName,
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.4,
+              ),
+        ),
+        const SizedBox(height: 4),
+        Text(f.dayLong(job.start), style: TextStyle(color: hint, fontSize: 15)),
+        if (job.extras.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (final extra in job.extras)
+                StatusPill(
+                  label: extra,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+            ],
           ),
-          const SizedBox(height: 12),
         ],
-        // When and what
+        if (job.assignment?.isTeamLead == true) ...[
+          const SizedBox(height: 8),
+          Text(context.t('job.teamLead'), style: TextStyle(color: hint)),
+        ],
+        const SizedBox(height: 16),
         Card(
           child: Padding(
             padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        f.dayLong(job.start),
-                        style: TextStyle(
-                          color: hint,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    JobStatusPill(job: job),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  f.timeRange(job.start, job.end),
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.4,
-                      ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  job.serviceName,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                ),
-                if (job.extras.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      for (final extra in job.extras)
-                        StatusPill(
-                          label: extra,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                    ],
-                  ),
-                ],
-                if (job.assignment?.isTeamLead == true) ...[
-                  const SizedBox(height: 8),
-                  Text(context.t('job.teamLead'),
-                      style: TextStyle(color: hint)),
-                ],
-              ],
+            child: ProgressBlock(
+              leftTop: f.timeRange(job.start, job.end),
+              rightTop: durationText(job.start, job.end).isEmpty
+                  ? null
+                  : durationText(job.start, job.end),
+              value: phaseProgress(phase),
+              color: phaseColor(phase),
+              leftBottom: phaseLabel(context, phase),
+              rightBottom: '${(phaseProgress(phase) * 100).round()}%',
             ),
           ),
         ),
@@ -453,9 +450,7 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
   /// The main buttons, pinned to the bottom so they are always in thumb reach.
   Widget _bottomBar(BuildContext context, Job job) {
     return Material(
-      color: Theme.of(context).colorScheme.surface,
-      elevation: 8,
-      shadowColor: Colors.black26,
+      color: Colors.transparent,
       child: SafeArea(
         top: false,
         child: Padding(
@@ -614,7 +609,7 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
               height: 44,
               decoration: BoxDecoration(
                 color: scheme.primary.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(14),
+                shape: BoxShape.circle,
               ),
               child: Icon(icon, size: 20, color: scheme.primary),
             ),
@@ -670,89 +665,6 @@ class _JobDetailScreenState extends ConsumerState<JobDetailScreen> {
           ],
         ),
       ),
-    );
-  }
-}
-
-/// Four dots showing where the job is: planned, on the way, working, done.
-class _Progress extends StatelessWidget {
-  const _Progress({required this.phase});
-
-  final JobPhase phase;
-
-  @override
-  Widget build(BuildContext context) {
-    final steps = [
-      (JobPhase.upcoming, context.t('job.step.planned')),
-      (JobPhase.onTheWay, context.t('job.step.onTheWay')),
-      (JobPhase.working, context.t('job.step.working')),
-      (JobPhase.done, context.t('job.step.done')),
-    ];
-    final current = steps.indexWhere((s) => s.$1 == phase);
-    final color = phaseColor(phase);
-    final hint = Theme.of(context).hintColor;
-
-    return Row(
-      children: [
-        for (var i = 0; i < steps.length; i++) ...[
-          Expanded(
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: i == 0
-                          ? const SizedBox()
-                          : Container(
-                              height: 3,
-                              color: i <= current
-                                  ? color
-                                  : hint.withValues(alpha: 0.25)),
-                    ),
-                    Container(
-                      width: 22,
-                      height: 22,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: i <= current ? color : Colors.transparent,
-                        border: Border.all(
-                          color: i <= current
-                              ? color
-                              : hint.withValues(alpha: 0.4),
-                          width: 2,
-                        ),
-                      ),
-                      child: i < current || phase == JobPhase.done
-                          ? const Icon(Icons.check,
-                              size: 14, color: Colors.white)
-                          : null,
-                    ),
-                    Expanded(
-                      child: i == steps.length - 1
-                          ? const SizedBox()
-                          : Container(
-                              height: 3,
-                              color: i < current
-                                  ? color
-                                  : hint.withValues(alpha: 0.25)),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  steps[i].$2,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight:
-                        i == current ? FontWeight.w800 : FontWeight.w500,
-                    color: i == current ? color : hint,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ],
     );
   }
 }

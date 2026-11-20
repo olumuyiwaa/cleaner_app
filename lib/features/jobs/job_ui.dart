@@ -32,3 +32,30 @@ class JobStatusPill extends StatelessWidget {
         color: phaseColor(job.phase),
       );
 }
+
+IconData phaseIcon(JobPhase phase) => switch (phase) {
+      JobPhase.upcoming => Icons.event_outlined,
+      JobPhase.onTheWay => Icons.directions_car_outlined,
+      JobPhase.working => Icons.cleaning_services_outlined,
+      JobPhase.done => Icons.check_circle_outline,
+      JobPhase.cancelled => Icons.cancel_outlined,
+    };
+
+/// How far along a job is, for progress bars: planned, on the way, working, done.
+double phaseProgress(JobPhase phase) => switch (phase) {
+      JobPhase.upcoming => 0.25,
+      JobPhase.onTheWay => 0.5,
+      JobPhase.working => 0.75,
+      JobPhase.done => 1.0,
+      JobPhase.cancelled => 0.0,
+    };
+
+/// 2h 30m, or an empty string for a non-positive span.
+String durationText(DateTime start, DateTime end) {
+  final minutes = end.difference(start).inMinutes;
+  if (minutes <= 0) return '';
+  final h = minutes ~/ 60;
+  final m = minutes % 60;
+  if (h == 0) return '${m}m';
+  return m == 0 ? '${h}h' : '${h}h ${m}m';
+}

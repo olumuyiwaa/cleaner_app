@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/format.dart';
 import '../../core/l10n/strings.dart';
@@ -10,252 +11,259 @@ import 'job_models.dart';
 import 'job_ui.dart';
 import 'jobs_providers.dart';
 
-class JobsScreen extends ConsumerWidget {
+class JobsScreen extends ConsumerStatefulWidget {
   const JobsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<JobsScreen> createState() => _JobsScreenState();
+}
+
+class _JobsScreenState extends ConsumerState<JobsScreen> {
+  JobsTab _tab = JobsTab.today;
+
+  Future<void> _refresh() async {
+    ref.invalidate(jobsProvider);
+    await ref.read(jobsProvider(_tab).future);
+  }
+
+  Future<void> _open(Uri uri) async {
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!ok && mounted) showInfo(context, context.t('job.cannotOpen'));
+  }
+
+  Uri _directions(Job job) {
+    final destination = (job.latitude != null && job.longitude != null)
+        ? '${job.latitude},${job.longitude}'
+        : Uri.encodeComponent(job.address);
+    return Uri.parse(
+        'https://www.google.com/maps/dir/?api=1&destination=$destination');
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final profile = ref.watch(sessionProvider).valueOrNull;
     final name = profile?.firstName ?? '';
+    final today = ref.watch(jobsProvider(JobsTab.today));
+    final list = ref.watch(jobsProvider(_tab));
 
-    return DefaultTabController(
-      length: JobsTab.values.length,
-      child: Scaffold(
-        // extendBodyBehindAppBar so hero card can sit flush under the status bar
-        extendBodyBehindAppBar: false,
-        appBar: AppBar(
-          titleSpacing: 20,
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
+    return Scaffold(
+      body: SafeArea(
+        bottom: false,
+        child: RefreshIndicator(
+          onRefresh: _refresh,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
             children: [
-              Text(
-                name.isEmpty
+              ScreenHeader(
+                title: name.isEmpty
                     ? context.t('jobs.title')
-                    : context.t('jobs.hi', {'name': name}),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              Text(
-                context.fmt.dayLong(DateTime.now()),
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: Theme.of(context).hintColor,
-                      fontWeight: FontWeight.w500,
-                    ),
-              ),
-            ],
-          ),
-          actions: [
-            Padding(
-              padding: const EdgeInsets.only(right: 20),
-              child: GestureDetector(
-                onTap: () => context.go('/profile'),
-                child: CircleAvatar(
-                  radius: 20,
-                  backgroundColor:
-                      Theme.of(context).colorScheme.primaryContainer,
-                  foregroundColor:
-                      Theme.of(context).colorScheme.onPrimaryContainer,
-                  backgroundImage: profile?.avatarUrl == null
-                      ? null
-                      : NetworkImage(profile!.avatarUrl!),
-                  child: profile?.avatarUrl == null
-                      ? Text(
-                          profile?.initials ?? '?',
-                          style: const TextStyle(
-                              fontSize: 13, fontWeight: FontWeight.w700),
-                        )
-                      : null,
+                    : context.t('jobs.welcome', {'name': name}),
+                subtitle: context.fmt.dayLong(DateTime.now()),
+                trailing: GestureDetector(
+                  onTap: () => context.go('/profile'),
+                  child: CircleAvatar(
+                    radius: 22,
+                    backgroundColor:
+                        Theme.of(context).colorScheme.primaryContainer,
+                    foregroundColor:
+                        Theme.of(context).colorScheme.onPrimaryContainer,
+                    backgroundImage: profile?.avatarUrl == null
+                        ? null
+                        : NetworkImage(profile!.avatarUrl!),
+                    child: profile?.avatarUrl == null
+                        ? Text(
+                            profile?.initials ?? '?',
+                            style: const TextStyle(
+                                fontSize: 13, fontWeight: FontWeight.w700),
+                          )
+                        : null,
+                  ),
                 ),
               ),
-            ),
-          ],
-          bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(48),
-            child: TabBar(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              tabs: [
-                Tab(text: context.t('jobs.today')),
-                Tab(text: context.t('jobs.upcoming')),
-                Tab(text: context.t('jobs.past')),
-              ],
-            ),
+              _hero(context, today),
+              SectionHeading(context.t('jobs.title')),
+              PillTabs(
+                labels: [
+                  context.t('jobs.today'),
+                  context.t('jobs.upcoming'),
+                  context.t('jobs.past'),
+                ],
+                selected: JobsTab.values.indexOf(_tab),
+                onChanged: (i) => setState(() => _tab = JobsTab.values[i]),
+              ),
+              const SizedBox(height: 14),
+              ..._jobs(context, list),
+            ],
           ),
-        ),
-        body: const TabBarView(
-          children: [
-            _JobsList(tab: JobsTab.today),
-            _JobsList(tab: JobsTab.upcoming),
-            _JobsList(tab: JobsTab.past),
-          ],
         ),
       ),
     );
   }
-}
 
-class _JobsList extends ConsumerWidget {
-  const _JobsList({required this.tab});
+  Widget _hero(BuildContext context, AsyncValue<List<Job>> today) {
+    return today.when(
+      loading: () => const _HeroSkeleton(),
+      error: (e, _) => ErrorView(
+        error: e,
+        onRetry: () => ref.invalidate(jobsProvider(JobsTab.today)),
+      ),
+      data: (jobs) {
+        final f = context.fmt;
+        final remaining = jobs
+            .where((j) =>
+                j.phase != JobPhase.done && j.phase != JobPhase.cancelled)
+            .toList();
+        final next = remaining.isEmpty ? null : remaining.first;
+        final summary = jobs.isEmpty
+            ? context.t('jobs.empty.today')
+            : (next == null
+                ? context.t('jobs.allDone')
+                : (jobs.length == 1
+                    ? context.t('jobs.summary.one')
+                    : context.t('jobs.summary.many', {'n': '${jobs.length}'})));
 
-  final JobsTab tab;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final jobs = ref.watch(jobsProvider(tab));
-
-    return jobs.when(
-      loading: () => const SkeletonList(),
-      error: (e, _) =>
-          ErrorView(error: e, onRetry: () => ref.invalidate(jobsProvider(tab))),
-      data: (list) {
-        Future<void> refresh() async {
-          ref.invalidate(jobsProvider(tab));
-          await ref.read(jobsProvider(tab).future);
-        }
-
-        if (list.isEmpty) {
-          return RefreshIndicator(
-            onRefresh: refresh,
-            child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              children: [
-                SizedBox(
-                  height: MediaQuery.of(context).size.height * 0.5,
-                  child: EmptyView(
-                    icon: Icons.event_available_outlined,
-                    title: context.t('jobs.empty.$tabKey'),
-                    message: tab == JobsTab.today
-                        ? context.t('jobs.empty.todayHint')
-                        : null,
-                  ),
+        return HeroCard(
+          chip: summary,
+          label: next == null ? context.t('jobs.today') : context.t('jobs.nextJob'),
+          value: next == null
+              ? '${jobs.length - remaining.length}/${jobs.length}'
+              : f.timeRange(next.start, next.end),
+          footer: next == null
+              ? null
+              : Column(
+                  children: [
+                    Text(
+                      next.serviceName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      next.address,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white60, fontSize: 13),
+                    ),
+                  ],
                 ),
-              ],
+          actions: [
+            HeroAction(
+              icon: Icons.navigation_outlined,
+              label: context.t('job.navigate'),
+              onTap: next == null ? null : () => _open(_directions(next)),
             ),
-          );
-        }
-
-        // On the Today tab the first job that is not finished is "next up".
-        final nextIndex = tab == JobsTab.today
-            ? list.indexWhere(
-                (j) =>
-                    j.phase != JobPhase.done && j.phase != JobPhase.cancelled,
-              )
-            : -1;
-        final header = tab == JobsTab.today ? 1 : 0;
-
-        return RefreshIndicator(
-          onRefresh: refresh,
-          child: ListView.separated(
-            physics: const AlwaysScrollableScrollPhysics(),
-            // Extra bottom padding for the floating pill nav
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 112),
-            itemCount: list.length + header,
-            separatorBuilder: (_, i) =>
-                SizedBox(height: i == 0 && header == 1 ? 14 : 10),
-            itemBuilder: (context, i) {
-              if (header == 1 && i == 0) return _TodayHeader(jobs: list);
-              final index = i - header;
-              return JobCard(
-                job: list[index],
-                showDate: tab != JobsTab.today,
-                nextUp: index == nextIndex,
-                onTap: () => context.push('/job/${list[index].id}'),
-              );
-            },
-          ),
+            HeroAction(
+              icon: Icons.call_outlined,
+              label: context.t('job.call'),
+              onTap: (next?.customerPhone == null)
+                  ? null
+                  : () => _open(Uri(scheme: 'tel', path: next!.customerPhone)),
+            ),
+            HeroAction(
+              icon: Icons.chat_bubble_outline,
+              label: context.t('job.chat'),
+              onTap: next == null ? null : () => context.push('/job/${next.id}/chat'),
+            ),
+            HeroAction(
+              icon: Icons.assignment_outlined,
+              label: context.t('job.title'),
+              onTap: next == null ? null : () => context.push('/job/${next.id}'),
+            ),
+          ],
         );
       },
     );
   }
 
-  String get tabKey => switch (tab) {
+  List<Widget> _jobs(BuildContext context, AsyncValue<List<Job>> list) {
+    return list.when(
+      loading: () => const [_CardSkeleton(), SizedBox(height: 12), _CardSkeleton()],
+      error: (e, _) => [
+        ErrorView(error: e, onRetry: () => ref.invalidate(jobsProvider(_tab))),
+      ],
+      data: (jobs) {
+        if (jobs.isEmpty) {
+          return [
+            SizedBox(
+              height: 260,
+              child: EmptyView(
+                icon: Icons.event_available_outlined,
+                title: context.t('jobs.empty.${_tabKey(_tab)}'),
+                message: _tab == JobsTab.today
+                    ? context.t('jobs.empty.todayHint')
+                    : null,
+              ),
+            ),
+          ];
+        }
+        final nextIndex = _tab == JobsTab.today
+            ? jobs.indexWhere((j) =>
+                j.phase != JobPhase.done && j.phase != JobPhase.cancelled)
+            : -1;
+        return [
+          for (var i = 0; i < jobs.length; i++) ...[
+            if (i > 0) const SizedBox(height: 12),
+            JobCard(
+              job: jobs[i],
+              showDate: _tab != JobsTab.today,
+              nextUp: i == nextIndex,
+              onTap: () => context.push('/job/${jobs[i].id}'),
+            ),
+          ],
+        ];
+      },
+    );
+  }
+
+  static String _tabKey(JobsTab tab) => switch (tab) {
         JobsTab.today => 'today',
         JobsTab.upcoming => 'upcoming',
         JobsTab.past => 'past',
       };
 }
 
-class _TodayHeader extends StatelessWidget {
-  const _TodayHeader({required this.jobs});
-
-  final List<Job> jobs;
+class _HeroSkeleton extends StatelessWidget {
+  const _HeroSkeleton();
 
   @override
-  Widget build(BuildContext context) {
-    final left = jobs
-        .where((j) => j.phase != JobPhase.done && j.phase != JobPhase.cancelled)
-        .length;
-    final done = jobs.length - left;
-    final finished = left == 0;
-    final summary = jobs.length == 1
-        ? context.t('jobs.summary.one')
-        : context.t('jobs.summary.many', {'n': '${jobs.length}'});
-    final scheme = Theme.of(context).colorScheme;
-    final accent = finished ? scheme.secondary : scheme.primary;
+  Widget build(BuildContext context) => const Card(
+        child: SizedBox(
+          height: 250,
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      );
+}
 
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-      decoration: BoxDecoration(
-        color: accent.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+class _CardSkeleton extends StatelessWidget {
+  const _CardSkeleton();
+
+  @override
+  Widget build(BuildContext context) => const Card(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                finished
-                    ? Icons.check_circle_rounded
-                    : Icons.calendar_today_rounded,
-                size: 18,
-                color: accent,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  finished ? context.t('jobs.allDone') : summary,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: accent,
-                      ),
-                ),
-              ),
-              Text(
-                '$done/${jobs.length}',
-                style: TextStyle(
-                  color: accent,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 13,
-                ),
-              ),
+              Row(children: [
+                Skeleton(width: 44, height: 44, radius: 14),
+                SizedBox(width: 12),
+                Skeleton(width: 140, height: 18),
+              ]),
+              SizedBox(height: 14),
+              Skeleton(height: 56, radius: 18),
             ],
           ),
-          const SizedBox(height: 10),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: LinearProgressIndicator(
-              value: jobs.isEmpty ? 0 : done / jobs.length,
-              minHeight: 6,
-              backgroundColor: accent.withValues(alpha: 0.16),
-              color: accent,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+        ),
+      );
 }
 
-String _duration(BuildContext context, DateTime start, DateTime end) {
-  final minutes = end.difference(start).inMinutes;
-  if (minutes <= 0) return '';
-  final h = minutes ~/ 60;
-  final m = minutes % 60;
-  if (h == 0) return '${m}m';
-  return m == 0 ? '${h}h' : '${h}h ${m}m';
-}
-
+/// A job as an inset card: service and phase on top, time, progress and place
+/// in the panel below.
 class JobCard extends StatelessWidget {
   const JobCard({
     super.key,
@@ -273,138 +281,29 @@ class JobCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final f = context.fmt;
-    final hint = Theme.of(context).hintColor;
     final color = phaseColor(job.phase);
-    final active =
-        job.phase == JobPhase.working || job.phase == JobPhase.onTheWay;
-    final muted = job.phase == JobPhase.done || job.phase == JobPhase.cancelled;
-    final duration = _duration(context, job.start, job.end);
+    final percent = (phaseProgress(job.phase) * 100).round();
+    final duration = durationText(job.start, job.end);
+    final timeText = showDate
+        ? '${f.day(job.start)} · ${f.timeRange(job.start, job.end)}'
+        : f.timeRange(job.start, job.end);
 
-    final borderColor = (active || nextUp)
-        ? color.withValues(alpha: 0.45)
-        : Theme.of(context).dividerColor;
-
-    return Material(
-      color: Theme.of(context).cardTheme.color,
-      clipBehavior: Clip.antiAlias,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(
-          color: borderColor,
-          width: (active || nextUp) ? 1.5 : 1,
-        ),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        child: IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Container(width: 6, color: muted ? color.withValues(alpha: 0.4) : color),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (nextUp && !active) ...[
-                        Text(
-                          context.t('jobs.nextUp').toUpperCase(),
-                          style: TextStyle(
-                            fontSize: 11,
-                            letterSpacing: 0.8,
-                            fontWeight: FontWeight.w800,
-                            color: color,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                      ],
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                if (showDate)
-                                  Text(
-                                    f.day(job.start),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: hint,
-                                    ),
-                                  ),
-                                Text(
-                                  f.timeRange(job.start, job.end),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleLarge
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.w800,
-                                        letterSpacing: -0.4,
-                                        color: muted ? hint : null,
-                                      ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          JobStatusPill(job: job),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        job.serviceName,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
-                      ),
-                      const SizedBox(height: 8),
-                      _line(Icons.place_outlined, job.address, hint, maxLines: 2),
-                      if (job.customerFirstName.isNotEmpty)
-                        _line(Icons.person_outline, job.customerName, hint),
-                      if (duration.isNotEmpty)
-                        _line(Icons.schedule_rounded, duration, hint),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+    return InsetCard(
+      icon: phaseIcon(job.phase),
+      iconColor: color,
+      title: job.serviceName,
+      onTap: onTap,
+      trailing: JobStatusPill(job: job),
+      child: ProgressBlock(
+        leftTop: timeText,
+        rightTop: duration.isEmpty ? null : duration,
+        value: phaseProgress(job.phase),
+        color: color,
+        leftBottom: nextUp && job.phase == JobPhase.upcoming
+            ? '${context.t('jobs.nextUp')} · ${job.address}'
+            : job.address,
+        rightBottom: '$percent%',
       ),
     );
   }
-
-  Widget _line(
-    IconData icon,
-    String text,
-    Color color, {
-    int maxLines = 1,
-  }) =>
-      Padding(
-        padding: const EdgeInsets.only(top: 3),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, size: 15, color: color),
-            const SizedBox(width: 5),
-            Expanded(
-              child: Text(
-                text,
-                maxLines: maxLines,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: color, fontSize: 13),
-              ),
-            ),
-          ],
-        ),
-      );
 }

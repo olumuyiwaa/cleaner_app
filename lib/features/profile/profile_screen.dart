@@ -94,16 +94,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     if (profile == null) return const Scaffold(body: LoadingView());
 
     return Scaffold(
-      appBar: AppBar(title: Text(context.t('nav.profile'))),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 112),
+      body: SafeArea(
+        bottom: false,
+        child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
         children: [
+          ScreenHeader(title: context.t('nav.profile')),
           // Dark hero identity card matching mockup style
           Container(
             padding: const EdgeInsets.symmetric(vertical: 26, horizontal: 18),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              color: Brand.pillNav,
+              borderRadius: BorderRadius.circular(28),
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Brand.navy, Brand.navyDark],
+              ),
             ),
             child: Column(
               children: [
@@ -156,25 +162,24 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           Card(
             child: Column(
               children: [
                 ListTile(
-                  leading: _iconWell(context, Icons.mail_outline),
+                  leading: const Icon(Icons.mail_outline),
                   title: Text(profile.email),
                 ),
                 ListTile(
-                  leading: _iconWell(context, Icons.phone_outlined),
+                  leading: const Icon(Icons.phone_outlined),
                   title: Text(profile.phone ?? context.t('profile.addPhone')),
-                  trailing: Icon(Icons.edit_outlined,
-                      size: 18, color: Theme.of(context).hintColor),
+                  trailing: const Icon(Icons.edit_outlined, size: 18),
                   onTap: () => _editPhone(profile),
                 ),
               ],
             ),
           ),
-          SectionTitle(context.t('profile.work')),
+          SectionHeading(context.t('profile.work')),
           Card(
             child: Column(
               children: [
@@ -191,7 +196,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ],
             ),
           ),
-          SectionTitle(context.t('profile.language')),
+          SectionHeading(context.t('profile.language')),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(12),
@@ -217,29 +222,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
           const SizedBox(height: 20),
         ],
+        ),
       ),
     );
   }
 
-  Widget _iconWell(BuildContext context, IconData icon) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      width: 36,
-      height: 36,
-      decoration: BoxDecoration(
-        color: scheme.primary.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Icon(icon, size: 18, color: scheme.primary),
-    );
-  }
-
-  Widget _nav(BuildContext context, IconData icon, String key, String route) {
-    return ListTile(
-      leading: _iconWell(context, icon),
-      title: Text(context.t(key), style: const TextStyle(fontWeight: FontWeight.w600)),
-      trailing: Icon(Icons.chevron_right, color: Theme.of(context).hintColor),
-      onTap: () => context.push(route),
-    );
-  }
+  Widget _nav(BuildContext context, IconData icon, String key, String route) =>
+      ListTile(
+        leading: IconTile(icon: icon, color: Brand.navy, size: 38),
+        title: Text(context.t(key)),
+        trailing: const Icon(Icons.chevron_right_rounded),
+        onTap: () => context.push(route),
+      );
 }
