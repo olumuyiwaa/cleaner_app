@@ -56,8 +56,8 @@ Without them the app still works; it just does not register for push.
 
 ## Notes and limits
 
-- This code was written without access to a Flutter toolchain, so it has **not been
-  compiled or run yet**. Expect to fix a few small analyzer errors on first build.
+- The app has been built and run against the backend and works. Remaining launch steps:
+  Firebase config for push, the icon and splash generation above, and store release.
 - Job photo thumbnails need the backend change that returns `viewUrl` for each photo
   (already in `olumuyiwaa/lady` main).
 - Location is best effort: if GPS is off or denied, check-in still goes to the
